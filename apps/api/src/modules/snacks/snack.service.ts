@@ -1,8 +1,8 @@
-import { Prisma, SnackCategory } from '@prisma/client';
+import { Prisma, SnackCategory, ActivityAction } from '@prisma/client';
 import { prisma } from '../../config/database.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { getSnackStatus, SnackStatus } from '../../utils/snackStatus.js';
-import { SnackQueryInput } from './snack.schema.js';
+import { SnackQueryInput, CreateSnackInput, UpdateSnackInput } from './snack.schema.js';
 
 export interface FormattedSnack {
   id: string;
@@ -22,7 +22,6 @@ export class SnackService {
     const { page, limit, search, category, status, sortBy, sortOrder } = query;
     const offset = (page - 1) * limit;
 
-    // Build raw SQL WHERE clauses to filter accurately and performantly on server-side
     const whereConditions: Prisma.Sql[] = [Prisma.sql`s."archivedAt" IS NULL`];
 
     if (category) {
@@ -46,7 +45,6 @@ export class SnackService {
 
     const whereClause = Prisma.sql`WHERE ${Prisma.join(whereConditions, ' AND ')}`;
 
-    // Total count query for pagination
     const countResult = await prisma.$queryRaw<[{ count: bigint }]>`
       SELECT COUNT(*) as count
       FROM "Snack" s
@@ -55,7 +53,6 @@ export class SnackService {
     const totalItems = Number(countResult[0]?.count || 0);
     const totalPages = Math.ceil(totalItems / limit) || 1;
 
-    // Determine sorting
     let orderByColumn = Prisma.sql`s."name"`;
     if (sortBy === 'quantity') {
       orderByColumn = Prisma.sql`s."quantity"`;
@@ -66,7 +63,6 @@ export class SnackService {
 
     const userIdParam = currentUserId || '00000000-0000-0000-0000-000000000000';
 
-    // Execute paginated fetch with vote counts and user vote flag
     const rows = await prisma.$queryRaw<
       Array<{
         id: string;
@@ -162,7 +158,6 @@ export class SnackService {
   }
 
   static async getSummary() {
-    // 1. Status counts using conditional aggregation
     const countRows = await prisma.$queryRaw<
       Array<{
         stocked: bigint;
@@ -184,9 +179,6 @@ export class SnackService {
       gone: Number(countRows[0]?.gone || 0),
     };
 
-    // 2. Snack of the Week calculation
-    // Time window: Current week (Monday to Sunday) in Asia/Kolkata timezone (UTC+5:30)
-    // Deterministic tie-breaker: most weekly votes -> most lifetime votes -> snack name ASC
     const weekStartResult = await prisma.$queryRaw<[{ week_start: Date }]>`
       SELECT date_trunc('week', (timezone('Asia/Kolkata', now()))) as week_start
     `;
@@ -225,6 +217,320 @@ export class SnackService {
     return {
       counts,
       snackOfTheWeek,
+    };
+  }
+
+  static async consumeSnack(snackId: string, amount: number, userId: string) {
+    return await prisma.$transaction(async (tx) => {
+      const updatedRows = await tx.$queryRaw<
+        Array<{
+          id: string;
+          name: string;
+          category: SnackCategory;
+          quantity: number;
+          lowStockThreshold: number;
+        }>
+      >`
+        UPDATE "Snack"
+        SET "quantity" = "quantity" - ${amount},
+            "updatedAt" = CURRENT_TIMESTAMP
+        WHERE "id" = ${snackId}
+          AND "archivedAt" IS NULL
+          AND "quantity" >= ${amount}
+        RETURNING "id", "name", "category", "quantity", "lowStockThreshold"
+      `;
+
+      if (!updatedRows || updatedRows.length === 0) {
+        const existingSnack = await tx.snack.findFirst({
+          where: { id: snackId, archivedAt: null },
+          select: { id: true, quantity: true },
+        });
+
+        if (!existingSnack) {
+          throw new ApiError(404, 'NOT_FOUND', 'Snack not found');
+        }
+
+        throw new ApiError(409, 'INSUFFICIENT_STOCK', 'Someone beat you to the last packet!');
+      }
+
+      const updatedSnack = updatedRows[0];
+
+      await tx.activity.create({
+        data: {
+          userId,
+          snackId,
+          action: ActivityAction.CONSUMED,
+          amount,
+        },
+      });
+
+      return {
+        id: updatedSnack.id,
+        name: updatedSnack.name,
+        category: updatedSnack.category,
+        quantity: updatedSnack.quantity,
+        lowStockThreshold: updatedSnack.lowStockThreshold,
+        status: getSnackStatus(updatedSnack.quantity, updatedSnack.lowStockThreshold),
+      };
+    });
+  }
+
+  static async restockSnack(snackId: string, amount: number, userId: string) {
+    return await prisma.$transaction(async (tx) => {
+      const existingSnack = await tx.snack.findFirst({
+        where: { id: snackId, archivedAt: null },
+      });
+
+      if (!existingSnack) {
+        throw new ApiError(404, 'NOT_FOUND', 'Snack not found');
+      }
+
+      const updatedRows = await tx.$queryRaw<
+        Array<{
+          id: string;
+          name: string;
+          category: SnackCategory;
+          quantity: number;
+          lowStockThreshold: number;
+        }>
+      >`
+        UPDATE "Snack"
+        SET "quantity" = "quantity" + ${amount},
+            "updatedAt" = CURRENT_TIMESTAMP
+        WHERE "id" = ${snackId}
+          AND "archivedAt" IS NULL
+        RETURNING "id", "name", "category", "quantity", "lowStockThreshold"
+      `;
+
+      const updatedSnack = updatedRows[0];
+
+      await tx.activity.create({
+        data: {
+          userId,
+          snackId,
+          action: ActivityAction.RESTOCKED,
+          amount,
+        },
+      });
+
+      return {
+        id: updatedSnack.id,
+        name: updatedSnack.name,
+        category: updatedSnack.category,
+        quantity: updatedSnack.quantity,
+        lowStockThreshold: updatedSnack.lowStockThreshold,
+        status: getSnackStatus(updatedSnack.quantity, updatedSnack.lowStockThreshold),
+      };
+    });
+  }
+
+  /**
+   * Admin: Create a new snack.
+   * If initial quantity > 0, records an initial RESTOCKED activity log.
+   */
+  static async createSnack(input: CreateSnackInput, adminUserId: string) {
+    const existing = await prisma.snack.findUnique({
+      where: { name: input.name },
+    });
+
+    if (existing) {
+      if (existing.archivedAt === null) {
+        throw new ApiError(409, 'DUPLICATE_NAME', 'A snack with this name already exists');
+      }
+      // If archived, unarchive and update
+      return await prisma.$transaction(async (tx) => {
+        const unarchived = await tx.snack.update({
+          where: { id: existing.id },
+          data: {
+            category: input.category,
+            quantity: input.quantity,
+            lowStockThreshold: input.lowStockThreshold,
+            archivedAt: null,
+          },
+        });
+
+        if (input.quantity > 0) {
+          await tx.activity.create({
+            data: {
+              userId: adminUserId,
+              snackId: unarchived.id,
+              action: ActivityAction.RESTOCKED,
+              amount: input.quantity,
+            },
+          });
+        }
+
+        return {
+          id: unarchived.id,
+          name: unarchived.name,
+          category: unarchived.category,
+          quantity: unarchived.quantity,
+          lowStockThreshold: unarchived.lowStockThreshold,
+          status: getSnackStatus(unarchived.quantity, unarchived.lowStockThreshold),
+          createdAt: unarchived.createdAt,
+          updatedAt: unarchived.updatedAt,
+        };
+      });
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      const snack = await tx.snack.create({
+        data: {
+          name: input.name,
+          category: input.category,
+          quantity: input.quantity,
+          lowStockThreshold: input.lowStockThreshold,
+        },
+      });
+
+      if (input.quantity > 0) {
+        await tx.activity.create({
+          data: {
+            userId: adminUserId,
+            snackId: snack.id,
+            action: ActivityAction.RESTOCKED,
+            amount: input.quantity,
+          },
+        });
+      }
+
+      return {
+        id: snack.id,
+        name: snack.name,
+        category: snack.category,
+        quantity: snack.quantity,
+        lowStockThreshold: snack.lowStockThreshold,
+        status: getSnackStatus(snack.quantity, snack.lowStockThreshold),
+        createdAt: snack.createdAt,
+        updatedAt: snack.updatedAt,
+      };
+    });
+  }
+
+  /**
+   * Admin: Edit snack metadata (name, category, threshold).
+   */
+  static async updateSnack(id: string, input: UpdateSnackInput) {
+    const existing = await prisma.snack.findFirst({
+      where: { id, archivedAt: null },
+    });
+
+    if (!existing) {
+      throw new ApiError(404, 'NOT_FOUND', 'Snack not found');
+    }
+
+    if (input.name && input.name !== existing.name) {
+      const duplicate = await prisma.snack.findFirst({
+        where: { name: input.name, id: { not: id }, archivedAt: null },
+      });
+      if (duplicate) {
+        throw new ApiError(409, 'DUPLICATE_NAME', 'Another snack with this name already exists');
+      }
+    }
+
+    const updated = await prisma.snack.update({
+      where: { id },
+      data: {
+        ...(input.name && { name: input.name }),
+        ...(input.category && { category: input.category }),
+        ...(input.lowStockThreshold !== undefined && { lowStockThreshold: input.lowStockThreshold }),
+      },
+    });
+
+    return {
+      id: updated.id,
+      name: updated.name,
+      category: updated.category,
+      quantity: updated.quantity,
+      lowStockThreshold: updated.lowStockThreshold,
+      status: getSnackStatus(updated.quantity, updated.lowStockThreshold),
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+    };
+  }
+
+  /**
+   * Admin: Soft archive snack so audit activities and votes are preserved.
+   */
+  static async deleteSnack(id: string) {
+    const existing = await prisma.snack.findFirst({
+      where: { id, archivedAt: null },
+    });
+
+    if (!existing) {
+      throw new ApiError(404, 'NOT_FOUND', 'Snack not found');
+    }
+
+    await prisma.snack.update({
+      where: { id },
+      data: { archivedAt: new Date() },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * User Vote: Vote for a snack.
+   * Relies on the database composite unique constraint (userId, snackId)
+   * to guarantee one-vote-per-user-per-snack even under concurrent requests.
+   */
+  static async voteSnack(snackId: string, userId: string) {
+    // 1. Verify snack exists and is not archived
+    const snack = await prisma.snack.findFirst({
+      where: { id: snackId, archivedAt: null },
+    });
+
+    if (!snack) {
+      throw new ApiError(404, 'NOT_FOUND', 'Snack not found');
+    }
+
+    try {
+      await prisma.vote.create({
+        data: {
+          userId,
+          snackId,
+        },
+      });
+    } catch (err: any) {
+      // Prisma P2002 error code is Unique constraint failed
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ApiError(409, 'ALREADY_VOTED', 'You have already voted for this snack');
+      }
+      throw err;
+    }
+
+    const voteCount = await prisma.vote.count({ where: { snackId } });
+    return {
+      snackId,
+      voteCount,
+      hasVoted: true,
+    };
+  }
+
+  /**
+   * User Vote: Remove vote for a snack. Idempotent.
+   */
+  static async unvoteSnack(snackId: string, userId: string) {
+    const snack = await prisma.snack.findFirst({
+      where: { id: snackId, archivedAt: null },
+    });
+
+    if (!snack) {
+      throw new ApiError(404, 'NOT_FOUND', 'Snack not found');
+    }
+
+    await prisma.vote.deleteMany({
+      where: {
+        snackId,
+        userId,
+      },
+    });
+
+    const voteCount = await prisma.vote.count({ where: { snackId } });
+    return {
+      snackId,
+      voteCount,
+      hasVoted: false,
     };
   }
 }

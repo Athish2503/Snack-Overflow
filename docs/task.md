@@ -93,33 +93,33 @@ Use this file as the source of truth for implementation progress. Mark a checkbo
 **Priority:** P0, highest-risk phase
 
 ### Consume
-- [ ] Implement `POST /snacks/:id/consume`.
-- [ ] Validate amount as a positive integer.
-- [ ] Use one conditional atomic database update:
+- [x] Implement `POST /snacks/:id/consume`.
+- [x] Validate amount as a positive integer.
+- [x] Use one conditional atomic database update:
   `UPDATE Snack SET quantity = quantity - amount WHERE id = snackId AND quantity >= amount RETURNING ...`
-- [ ] Do not use a read-then-write check in application memory.
-- [ ] Insert `CONSUMED` activity in the same transaction.
-- [ ] Return 404 for missing/archived snack.
-- [ ] Return 409 for insufficient stock.
-- [ ] Ensure failed consumption creates no activity row.
+- [x] Do not use a read-then-write check in application memory.
+- [x] Insert `CONSUMED` activity in the same transaction.
+- [x] Return 404 for missing/archived snack.
+- [x] Return 409 for insufficient stock.
+- [x] Ensure failed consumption creates no activity row.
 
 ### Restock
-- [ ] Implement admin-only `POST /snacks/:id/restock`.
-- [ ] Validate amount as a positive integer.
-- [ ] Increment stock atomically.
-- [ ] Insert `RESTOCKED` activity in the same transaction.
-- [ ] Ensure failed restock creates no partial activity.
+- [x] Implement admin-only `POST /snacks/:id/restock`.
+- [x] Validate amount as a positive integer.
+- [x] Increment stock atomically.
+- [x] Insert `RESTOCKED` activity in the same transaction.
+- [x] Ensure failed restock creates no partial activity.
 
 ### Required concurrency proof
-- [ ] Use a real PostgreSQL test database.
-- [ ] Seed one snack with quantity 3.
-- [ ] Send 10 simultaneous consume requests, each for amount 1.
-- [ ] Assert exactly 3 requests succeed.
-- [ ] Assert exactly 7 requests return 409.
-- [ ] Assert final quantity is exactly 0.
-- [ ] Assert exactly 3 `CONSUMED` activity rows exist.
-- [ ] Add a test for concurrent consumes with varied amounts if time permits.
-- [ ] Explain the database-level atomicity in README.
+- [x] Use a real PostgreSQL test database.
+- [x] Seed one snack with quantity 3.
+- [x] Send 10 simultaneous consume requests, each for amount 1.
+- [x] Assert exactly 3 requests succeed.
+- [x] Assert exactly 7 requests return 409.
+- [x] Assert final quantity is exactly 0.
+- [x] Assert exactly 3 `CONSUMED` activity rows exist.
+- [x] Add a test for concurrent consumes with varied amounts if time permits.
+- [x] Explain the database-level atomicity in README.
 
 **Exit criteria:** Concurrency test passes repeatedly against PostgreSQL. This phase must not be skipped.
 
@@ -128,20 +128,20 @@ Use this file as the source of truth for implementation progress. Mark a checkbo
 **Priority:** P1
 
 ### Voting
-- [ ] Implement `POST /snacks/:id/vote`.
-- [ ] Implement `DELETE /snacks/:id/vote`.
-- [ ] Use the database composite unique constraint as the final duplicate-vote guard.
-- [ ] Translate duplicate vote conflict into HTTP 409.
-- [ ] Add tests for vote, unvote, duplicate vote, and concurrent duplicate vote.
+- [x] Implement `POST /snacks/:id/vote`.
+- [x] Implement `DELETE /snacks/:id/vote`.
+- [x] Use the database composite unique constraint as the final duplicate-vote guard.
+- [x] Translate duplicate vote conflict into HTTP 409.
+- [x] Add tests for vote, unvote, duplicate vote, and concurrent duplicate vote.
 
 ### Admin CRUD
-- [ ] Implement admin-only `POST /snacks`.
-- [ ] Implement admin-only `PATCH /snacks/:id`.
-- [ ] Implement admin-only `DELETE /snacks/:id`.
-- [ ] Prefer soft archive so historical activity remains meaningful.
-- [ ] Validate name, category, quantity, and threshold.
-- [ ] Handle duplicate snack names consistently.
-- [ ] Add tests for admin success and member rejection.
+- [x] Implement admin-only `POST /snacks`.
+- [x] Implement admin-only `PATCH /snacks/:id`.
+- [x] Implement admin-only `DELETE /snacks/:id`.
+- [x] Prefer soft archive so historical activity remains meaningful.
+- [x] Validate name, category, quantity, and threshold.
+- [x] Handle duplicate snack names consistently.
+- [x] Add tests for admin success and member rejection.
 
 **Exit criteria:** All snack mutation APIs are protected and covered by tests.
 

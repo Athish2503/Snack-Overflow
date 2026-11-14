@@ -76,3 +76,36 @@ This project is organized as an npm workspace monorepo:
   2. Highest total lifetime votes (`lifetimeVotes DESC`)
   3. Alphabetical snack name (`name ASC`)
 - **Fallback**: If no votes were cast during the current week, `snackOfTheWeek` returns `null` so the UI can display an appropriate empty-state message.
+
+
+## Concurrency Strategy & Atomic Consumption
+
+### The Problem with Read-Then-Write
+Under concurrent load (e.g. two users clicking "Consume" on the last snack simultaneously), reading quantity into application memory, checking if `quantity >= amount`, and writing `quantity - amount` causes race conditions that oversell inventory below zero.
+
+### The Solution: Database-Level Conditional Update
+Snack Overflow guarantees inventory safety at the PostgreSQL level via a single atomic update wrapped in an explicit transaction:
+
+```sql
+UPDATE "Snack"
+SET "quantity" = "quantity" - $1,
+    "updatedAt" = CURRENT_TIMESTAMP
+WHERE "id" = $2
+  AND "archivedAt" IS NULL
+  AND "quantity" >= $1
+RETURNING "id", "name", "category", "quantity", "lowStockThreshold";
+```
+
+- If rows returned $= 0$: The application distinguishes between non-existent/archived snacks (`404 NOT_FOUND`) and depleted stock (`409 INSUFFICIENT_STOCK`).
+- If rows returned $> 0$: The `CONSUMED` activity record is inserted in the exact same database transaction (`prisma.$transaction`). If either fails, the transaction rolls back completely.
+- Secondary safety net: The database check constraint `CHECK ("quantity" >= 0)` guarantees that quantity cannot become negative under any circumstance.
+
+### Concurrency Proof
+Verified via automated integration test in `apps/api/tests/consumption.test.ts`:
+- **Initial condition**: 1 snack seeded with `quantity = 3`.
+- **Concurrent load**: 10 simultaneous HTTP requests, each requesting `amount = 1`.
+- **Result**:
+  - Exactly **3** requests succeed (`200 OK`).
+  - Exactly **7** requests receive `409 Conflict` (`INSUFFICIENT_STOCK`).
+  - Final database quantity is exactly **0** (never negative).
+  - Exactly **3** `CONSUMED` activity records created in PostgreSQL.

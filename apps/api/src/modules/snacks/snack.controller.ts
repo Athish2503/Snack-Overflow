@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { SnackService } from './snack.service.js';
 import { AuthRequest } from '../../types/express.js';
-import { SnackQueryInput } from './snack.schema.js';
+import { SnackQueryInput, InventoryMutationInput, CreateSnackInput, UpdateSnackInput } from './snack.schema.js';
 
 export class SnackController {
   static async getSnacks(req: AuthRequest, res: Response) {
@@ -21,5 +21,73 @@ export class SnackController {
   static async getSummary(_req: AuthRequest, res: Response) {
     const summary = await SnackService.getSummary();
     res.status(200).json(summary);
+  }
+
+  static async consumeSnack(req: AuthRequest, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const { amount } = req.body as InventoryMutationInput;
+    const userId = req.user!.id;
+
+    const updatedSnack = await SnackService.consumeSnack(id, amount, userId);
+    res.status(200).json({
+      data: updatedSnack,
+    });
+  }
+
+  static async restockSnack(req: AuthRequest, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const { amount } = req.body as InventoryMutationInput;
+    const userId = req.user!.id;
+
+    const updatedSnack = await SnackService.restockSnack(id, amount, userId);
+    res.status(200).json({
+      data: updatedSnack,
+    });
+  }
+
+  static async createSnack(req: AuthRequest, res: Response) {
+    const input = req.body as CreateSnackInput;
+    const adminUserId = req.user!.id;
+
+    const snack = await SnackService.createSnack(input, adminUserId);
+    res.status(201).json({
+      data: snack,
+    });
+  }
+
+  static async updateSnack(req: AuthRequest, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const input = req.body as UpdateSnackInput;
+
+    const updated = await SnackService.updateSnack(id, input);
+    res.status(200).json({
+      data: updated,
+    });
+  }
+
+  static async deleteSnack(req: AuthRequest, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    await SnackService.deleteSnack(id);
+    res.status(204).send();
+  }
+
+  static async voteSnack(req: AuthRequest, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const userId = req.user!.id;
+
+    const result = await SnackService.voteSnack(id, userId);
+    res.status(200).json({
+      data: result,
+    });
+  }
+
+  static async unvoteSnack(req: AuthRequest, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const userId = req.user!.id;
+
+    const result = await SnackService.unvoteSnack(id, userId);
+    res.status(200).json({
+      data: result,
+    });
   }
 }
