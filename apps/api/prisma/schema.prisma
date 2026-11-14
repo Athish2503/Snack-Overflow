@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum SnackCategory {
+  SWEET
+  SAVOURY
+  DRINK
+  HEALTHY_ISH
+}
+
+enum ActivityAction {
+  CONSUMED
+  RESTOCKED
+}
+
+model User {
+  id         String     @id @default(uuid())
+  name       String
+  email      String     @unique
+  password   String
+  role       Role       @default(MEMBER)
+
+  votes      Vote[]
+  activities Activity[]
+
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model Snack {
+  id                String        @id @default(uuid())
+  name              String        @unique
+  category          SnackCategory
+  quantity          Int           @default(0)
+  lowStockThreshold Int           @default(5)
+
+  votes             Vote[]
+  activities        Activity[]
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  archivedAt        DateTime?
+
+  @@index([category])
+  @@index([quantity])
+  @@index([archivedAt])
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+
+  userId    String
+  snackId   String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snack     Snack    @relation(fields: [snackId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, snackId])
+  @@index([snackId])
+}
+
+model Activity {
+  id        String         @id @default(uuid())
+
+  userId    String
+  snackId   String
+  action    ActivityAction
+  amount    Int
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snack     Snack          @relation(fields: [snackId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime       @default(now())
+
+  @@index([snackId, createdAt])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}

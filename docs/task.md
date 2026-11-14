@@ -27,23 +27,23 @@ Use this file as the source of truth for implementation progress. Mark a checkbo
 
 **Priority:** P0
 
-- [ ] Configure PostgreSQL connection.
-- [ ] Add Prisma and initialize schema/migrations.
-- [ ] Implement `User`, `Snack`, `Vote`, and `Activity` models.
-- [ ] Add enums for role, category, and activity action.
-- [ ] Add unique email constraint.
-- [ ] Add unique snack name constraint.
-- [ ] Add composite unique constraint on `(userId, snackId)` for votes.
-- [ ] Add indexes for common snack/activity queries.
-- [ ] Add database check constraints:
+- [x] Configure PostgreSQL connection.
+- [x] Add Prisma and initialize schema/migrations.
+- [x] Implement `User`, `Snack`, `Vote`, and `Activity` models.
+- [x] Add enums for role, category, and activity action.
+- [x] Add unique email constraint.
+- [x] Add unique snack name constraint.
+- [x] Add composite unique constraint on `(userId, snackId)` for votes.
+- [x] Add indexes for common snack/activity queries.
+- [x] Add database check constraints:
   - snack quantity >= 0
   - low stock threshold >= 0
   - activity amount > 0
-- [ ] Add `archivedAt` for soft deletion, if using the recommended archive approach.
-- [ ] Create migration and verify it applies from an empty database.
-- [ ] Create seed script with one admin, one member, and sample snacks.
-- [ ] Hash seed passwords; never store plain-text passwords.
-- [ ] Document demo credentials in README using development-only credentials.
+- [x] Add `archivedAt` for soft deletion, if using the recommended archive approach.
+- [x] Create migration and verify it applies from an empty database.
+- [x] Create seed script with one admin, one member, and sample snacks.
+- [x] Hash seed passwords; never store plain-text passwords.
+- [x] Document demo credentials in README using development-only credentials.
 
 **Exit criteria:** Database migrations and seed work from a clean database; constraints are visible in PostgreSQL.
 
@@ -51,20 +51,20 @@ Use this file as the source of truth for implementation progress. Mark a checkbo
 
 **Priority:** P0
 
-- [ ] Create Express application and route structure.
-- [ ] Add centralized error classes/handler.
-- [ ] Add Zod validation middleware/helpers.
-- [ ] Implement password verification.
-- [ ] Implement `POST /auth/login`.
-- [ ] Implement `GET /auth/me` to restore the current session.
-- [ ] Implement `POST /auth/logout`.
-- [ ] Configure secure HttpOnly cookie or another documented secure session strategy.
-- [ ] Implement authentication middleware.
-- [ ] Implement `requireAdmin` middleware.
-- [ ] Ensure role is derived from the authenticated user, never the request body.
-- [ ] Verify protected routes return 401 when unauthenticated.
-- [ ] Verify member receives 403 on admin-only routes.
-- [ ] Add basic auth and RBAC tests.
+- [x] Create Express application and route structure.
+- [x] Add centralized error classes/handler.
+- [x] Add Zod validation middleware/helpers.
+- [x] Implement password verification.
+- [x] Implement `POST /auth/login`.
+- [x] Implement `GET /auth/me` to restore the current session.
+- [x] Implement `POST /auth/logout`.
+- [x] Configure secure HttpOnly cookie or another documented secure session strategy.
+- [x] Implement authentication middleware.
+- [x] Implement `requireAdmin` middleware.
+- [x] Ensure role is derived from the authenticated user, never the request body.
+- [x] Verify protected routes return 401 when unauthenticated.
+- [x] Verify member receives 403 on admin-only routes.
+- [x] Add basic auth and RBAC tests.
 
 **Exit criteria:** Login works and direct API calls cannot bypass role restrictions.
 

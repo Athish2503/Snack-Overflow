@@ -1,7 +1,12 @@
-import express, { Express, Request, Response, NextFunction } from 'express';
+import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { config } from './config/env.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import authRoutes from './modules/auth/auth.routes.js';
+import { authenticate } from './middleware/authenticate.js';
+import { requireAdmin } from './middleware/authorize.js';
+import { AuthRequest } from './types/express.js';
 
 export const createApp = (): Express => {
   const app = express();
@@ -23,29 +28,24 @@ export const createApp = (): Express => {
     res.status(200).json({ message: 'Snack Overflow API operational' });
   });
 
-  // Centralized 404 handler for API routes
-  app.use('/api', (_req: Request, res: Response) => {
-    res.status(404).json({
-      error: {
-        code: 'NOT_FOUND',
-        message: 'Resource not found',
-      },
-    });
+  // Auth routes mounted under /api/auth and /auth for convenience
+  app.use('/api/auth', authRoutes);
+  app.use('/auth', authRoutes);
+
+  // Test endpoints for RBAC verification
+  app.get('/api/test/protected', authenticate, (req: AuthRequest, res: Response) => {
+    res.status(200).json({ message: 'Protected resource accessed', user: req.user });
   });
+
+  app.get('/api/test/admin-only', authenticate, requireAdmin, (req: AuthRequest, res: Response) => {
+    res.status(200).json({ message: 'Admin resource accessed', user: req.user });
+  });
+
+  // Centralized 404 handler for API routes
+  app.use('/api', notFoundHandler);
 
   // Global error handler
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const statusCode = err.statusCode || 500;
-    const code = err.code || 'INTERNAL_SERVER_ERROR';
-    const message = err.message || 'An unexpected error occurred';
-
-    res.status(statusCode).json({
-      error: {
-        code,
-        message,
-      },
-    });
-  });
+  app.use(errorHandler);
 
   return app;
 };
