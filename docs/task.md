@@ -72,19 +72,19 @@ Use this file as the source of truth for implementation progress. Mark a checkbo
 
 **Priority:** P1
 
-- [ ] Implement `GET /snacks`.
-- [ ] Support server-side category filtering.
-- [ ] Support server-side status filtering.
-- [ ] Support case-insensitive name search.
-- [ ] Support pagination with validated page and limit.
-- [ ] Return pagination metadata.
-- [ ] Return derived status; do not store status in the database.
-- [ ] Return vote count and whether the current user has voted, where practical.
-- [ ] Implement `GET /snacks/:id`.
-- [ ] Implement `GET /snacks/summary`.
-- [ ] Implement status counts for stocked, running_low, and gone.
-- [ ] Implement and document the Snack of the Week rule.
-- [ ] Add tests for filters, search, pagination, status boundaries, and summary.
+- [x] Implement `GET /snacks`.
+- [x] Support server-side category filtering.
+- [x] Support server-side status filtering.
+- [x] Support case-insensitive name search.
+- [x] Support pagination with validated page and limit.
+- [x] Return pagination metadata.
+- [x] Return derived status; do not store status in the database.
+- [x] Return vote count and whether the current user has voted, where practical.
+- [x] Implement `GET /snacks/:id`.
+- [x] Implement `GET /snacks/summary`.
+- [x] Implement status counts for stocked, running_low, and gone.
+- [x] Implement and document the Snack of the Week rule.
+- [x] Add tests for filters, search, pagination, status boundaries, and summary.
 
 **Exit criteria:** API results are correct for all status boundaries and filters are executed by the server/database.
 

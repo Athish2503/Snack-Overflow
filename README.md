@@ -65,3 +65,14 @@ This project is organized as an npm workspace monorepo:
   - `snack_quantity_nonnegative`: `quantity >= 0`
   - `snack_threshold_nonnegative`: `lowStockThreshold >= 0`
   - `activity_amount_positive`: `amount > 0`
+
+
+## Snack of the Week Calculation Rule
+
+- **Time Window**: Monday 00:00:00 to Sunday 23:59:59 based on `Asia/Kolkata` timezone (UTC+5:30).
+- **Weekly Votes**: Calculated by counting votes created during the current week (`createdAt >= week_start`).
+- **Tie-Breaking Order**:
+  1. Highest weekly votes (`weeklyVotes DESC`)
+  2. Highest total lifetime votes (`lifetimeVotes DESC`)
+  3. Alphabetical snack name (`name ASC`)
+- **Fallback**: If no votes were cast during the current week, `snackOfTheWeek` returns `null` so the UI can display an appropriate empty-state message.
