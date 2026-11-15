@@ -28,8 +28,18 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Snack Overflow',
+  title: 'Snack Overflow — Office Pantry Manager',
   description: 'Never fight over the last packet again.',
+  manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/snack-overflow-mark.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+  },
 };
 
 export default function RootLayout({

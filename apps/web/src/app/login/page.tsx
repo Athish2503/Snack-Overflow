@@ -588,6 +588,20 @@ export default function LoginPage() {
 
           {/* Left panel main text centered up */}
           <div className="lp-left-content">
+            <div style={{ marginBottom: 16 }}>
+              <img
+                src="/snack-overflow-mark.svg"
+                alt="Snack Overflow"
+                width={84}
+                height={84}
+                style={{
+                  borderRadius: 22,
+                  margin: '0 auto',
+                  display: 'block',
+                  filter: 'drop-shadow(3px 3px 0 #1B1B2F)',
+                }}
+              />
+            </div>
             <h1 className="lp-left-tagline">
               Snack<br />Overflow
             </h1>
@@ -611,22 +625,16 @@ export default function LoginPage() {
           <div className="lp-card">
             {/* brand logo header */}
             <div className="lp-card-logo">
-              <div
+              <img
+                src="/snack-overflow-mark.svg"
+                alt="Snack Overflow"
+                width={42}
+                height={42}
                 style={{
-                  width: 42,
-                  height: 42,
                   borderRadius: 12,
-                  background: '#FF7A1A',
-                  border: '2px solid #1B1B2F',
-                  boxShadow: '2.5px 2.5px 0 #1B1B2F',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#1B1B2F',
+                  flexShrink: 0,
                 }}
-              >
-                <Package size={22} strokeWidth={2.5} />
-              </div>
+              />
               <div className="lp-card-logo-name">
                 Snack <span>Overflow</span>
               </div>

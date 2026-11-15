@@ -112,11 +112,20 @@ export function Sidebar() {
     <>
       {/* Desktop full sidebar (lg+) */}
       <aside className="sidebar" style={{ display: 'none' }} id="sidebar-full">
-        <div className="sidebar-logo">
-          <span className="logo-snack">SNACK</span>
-          <span className="logo-overflow">OVERFLOW</span>
+        <Link href="/dashboard" className="sidebar-logo focus-ring" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img
+            src="/snack-overflow-mark.svg"
+            alt="Snack Overflow"
+            width={34}
+            height={34}
+            style={{ borderRadius: 8, flexShrink: 0 }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+            <span className="logo-snack">SNACK</span>
+            <span className="logo-overflow">OVERFLOW</span>
+          </div>
           <span className="sidebar-badge">PANTRY</span>
-        </div>
+        </Link>
         <nav className="sidebar-nav">
           {navItems.map((item) => (
             <NavItem key={item.href} {...item} />
@@ -130,9 +139,15 @@ export function Sidebar() {
 
       {/* Tablet icon rail (md–lg) */}
       <aside className="sidebar-rail" style={{ display: 'none' }} id="sidebar-rail">
-        <div className="rail-logo">
-          <Package size={22} color="var(--primary)" strokeWidth={2.4} />
-        </div>
+        <Link href="/dashboard" className="rail-logo focus-ring" aria-label="Snack Overflow" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img
+            src="/snack-overflow-mark.svg"
+            alt="Snack Overflow"
+            width={30}
+            height={30}
+            style={{ borderRadius: 8 }}
+          />
+        </Link>
         {navItems.map((item) => (
           <RailItem key={item.href} {...item} />
         ))}

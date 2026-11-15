@@ -34,19 +34,22 @@ export default function RootPage() {
     >
       <div
         style={{
-          width: 72,
-          height: 72,
+          width: 80,
+          height: 80,
           borderRadius: 20,
-          background: 'var(--primary)',
-          border: '2.5px solid var(--ink)',
-          boxShadow: '4px 4px 0 var(--ink)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'var(--ink)',
+          overflow: 'hidden',
         }}
       >
-        <Package size={36} strokeWidth={2.5} />
+        <img
+          src="/snack-overflow-mark.svg"
+          alt="Snack Overflow"
+          width={80}
+          height={80}
+          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        />
       </div>
       <LoadingSpinner size="lg" />
     </div>

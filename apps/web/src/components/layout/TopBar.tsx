@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Search, ChevronDown, LogOut, Package, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -194,8 +195,14 @@ export function TopBar() {
 export function MobileTopBar() {
   return (
     <header className="mobile-topbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Package size={22} color="var(--primary)" strokeWidth={2.5} />
+      <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+        <img
+          src="/snack-overflow-mark.svg"
+          alt="Snack Overflow"
+          width={28}
+          height={28}
+          style={{ borderRadius: 6, flexShrink: 0 }}
+        />
         <span
           style={{
             fontFamily: 'var(--font-bricolage), Bricolage Grotesque, sans-serif',
@@ -206,7 +213,7 @@ export function MobileTopBar() {
         >
           Snack<span style={{ color: 'var(--primary)' }}>Overflow</span>
         </span>
-      </div>
+      </Link>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <CartTrigger />
         <UserMenu compactOnMobile={true} />
