@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Radio, ArrowUpRight, ArrowDownLeft, RefreshCcw } from 'lucide-react';
 import { BentoTile } from './BentoTile';
+import { useEvents } from '@/contexts/EventsContext';
 import { AdminRecentActivityItem } from '@/lib/types';
 
 interface LiveActivityTileProps {
@@ -48,10 +49,12 @@ export function LiveActivityTile({
   onRetry,
   staggerIndex = 2,
 }: LiveActivityTileProps) {
+  const { isConnected } = useEvents();
+
   return (
     <BentoTile
       title="Live Activity"
-      icon={<Radio size={18} className="pulse-radio" color="var(--accent)" />}
+      icon={<Radio size={18} className="pulse-radio" color={isConnected ? 'var(--stocked)' : 'var(--accent)'} />}
       isLoading={isLoading}
       isError={isError}
       onRetry={onRetry}
@@ -60,8 +63,8 @@ export function LiveActivityTile({
         <span
           className="badge"
           style={{
-            background: 'var(--accent-soft)',
-            color: 'var(--accent)',
+            background: isConnected ? 'var(--stocked-soft)' : 'var(--accent-soft)',
+            color: isConnected ? 'var(--stocked-ink)' : 'var(--accent)',
             fontSize: 10,
             fontWeight: 800,
             display: 'inline-flex',
@@ -75,11 +78,11 @@ export function LiveActivityTile({
               width: 5,
               height: 5,
               borderRadius: '50%',
-              background: 'var(--accent)',
+              background: isConnected ? 'var(--stocked)' : 'var(--accent)',
               display: 'inline-block',
             }}
           />
-          20s
+          {isConnected ? 'Live SSE' : '20s poll'}
         </span>
       }
       headerAction={

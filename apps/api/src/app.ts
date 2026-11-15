@@ -9,6 +9,7 @@ import authRoutes from './modules/auth/auth.routes.js';
 import snackRoutes from './modules/snacks/snack.routes.js';
 import activityRoutes from './modules/activity/activity.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
+import eventsRoutes from './modules/events/events.routes.js';
 import uploadRoutes from './modules/upload/upload.routes.js';
 import { authenticate } from './middleware/authenticate.js';
 import { requireAdmin } from './middleware/authorize.js';
@@ -60,6 +61,10 @@ export const createApp = (): Express => {
   // Admin routes mounted under /api/admin and /admin (Admin only)
   app.use('/api/admin', adminRoutes);
   app.use('/admin', adminRoutes);
+
+  // Real-time Server-Sent Events (SSE) routes mounted under /api/events and /events
+  app.use('/api/events', eventsRoutes);
+  app.use('/events', eventsRoutes);
 
   // Test endpoints for RBAC verification
   app.get('/api/test/protected', authenticate, (req: AuthRequest, res: Response) => {

@@ -26,7 +26,7 @@ export default function SnacksPage() {
   const querySearch = searchParams.get('search') || '';
   const category = (searchParams.get('category') as SnackCategory) || undefined;
   const status = (searchParams.get('status') as SnackStatus) || undefined;
-  const sortBy = (searchParams.get('sortBy') as 'name' | 'quantity' | 'createdAt') || 'name';
+  const sortBy = (searchParams.get('sortBy') as 'name' | 'quantity' | 'createdAt' | 'votes') || 'name';
   const pageParsed = parseInt(searchParams.get('page') || '1', 10);
   const page = isNaN(pageParsed) || pageParsed < 1 ? 1 : pageParsed;
 
@@ -88,7 +88,12 @@ export default function SnacksPage() {
   if (querySearch) queryParams.set('search', querySearch);
   if (category) queryParams.set('category', category);
   if (status) queryParams.set('status', status);
-  if (sortBy) queryParams.set('sortBy', sortBy);
+  if (sortBy) {
+    queryParams.set('sortBy', sortBy);
+    if (sortBy === 'votes') {
+      queryParams.set('sortOrder', 'desc');
+    }
+  }
 
   const {
     data,
@@ -114,7 +119,7 @@ export default function SnacksPage() {
     updateUrl({ status: st, page: 1 });
   };
 
-  const handleSortChange = (sort?: 'name' | 'quantity' | 'createdAt') => {
+  const handleSortChange = (sort?: 'name' | 'quantity' | 'createdAt' | 'votes') => {
     updateUrl({ sortBy: sort || 'name', page: 1 });
   };
 

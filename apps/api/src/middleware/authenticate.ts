@@ -44,3 +44,36 @@ export const authenticate = async (req: AuthRequest, _res: Response, next: NextF
     next(error);
   }
 };
+
+export const optionalAuthenticate = async (req: AuthRequest, _res: Response, next: NextFunction) => {
+  try {
+    const token = req.cookies.access_token;
+    if (!token) {
+      return next();
+    }
+
+    let payload: JwtPayload;
+    try {
+      payload = jwt.verify(token, config.sessionSecret) as JwtPayload;
+    } catch {
+      return next();
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    if (user) {
+      req.user = user;
+    }
+    next();
+  } catch {
+    next();
+  }
+};

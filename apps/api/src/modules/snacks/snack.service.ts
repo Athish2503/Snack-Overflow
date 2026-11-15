@@ -3,6 +3,7 @@ import { prisma } from '../../config/database.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { getSnackStatus, SnackStatus } from '../../utils/snackStatus.js';
 import { SnackQueryInput, CreateSnackInput, UpdateSnackInput } from './snack.schema.js';
+import { EventsService } from '../events/events.service.js';
 
 export interface FormattedSnack {
   id: string;
@@ -329,7 +330,7 @@ export class SnackService {
   }
 
   static async consumeSnack(snackId: string, amount: number, userId: string) {
-    return await prisma.$transaction(async (tx) => {
+    const res = await prisma.$transaction(async (tx) => {
       const updatedRows = await tx.$queryRaw<
         Array<{
           id: string;
@@ -366,12 +367,15 @@ export class SnackService {
 
       const updatedSnack = updatedRows[0];
 
-      await tx.activity.create({
+      const activity = await tx.activity.create({
         data: {
           userId,
           snackId,
           action: ActivityAction.CONSUMED,
           amount,
+        },
+        include: {
+          user: { select: { name: true } },
         },
       });
 
@@ -379,7 +383,7 @@ export class SnackService {
       const images = rawImages.length > 0 ? rawImages : (updatedSnack.imageUrl ? [updatedSnack.imageUrl] : []);
       const imageUrl = updatedSnack.imageUrl || (images.length > 0 ? images[0] : null);
 
-      return {
+      const result = {
         id: updatedSnack.id,
         name: updatedSnack.name,
         category: updatedSnack.category,
@@ -390,11 +394,32 @@ export class SnackService {
         images,
         status: getSnackStatus(updatedSnack.quantity, updatedSnack.lowStockThreshold),
       };
+
+      return { result, activity };
     });
+
+    // Real-time SSE Broadcasts
+    EventsService.broadcastStockUpdated({
+      snackId: res.result.id,
+      snackName: res.result.name,
+      quantity: res.result.quantity,
+      lowStockThreshold: res.result.lowStockThreshold,
+      status: res.result.status,
+    });
+    EventsService.broadcastActivityNew({
+      id: res.activity.id,
+      userName: res.activity.user?.name || 'Member',
+      snackName: res.result.name,
+      action: 'CONSUMED',
+      amount,
+      createdAt: res.activity.createdAt,
+    });
+
+    return res.result;
   }
 
   static async restockSnack(snackId: string, amount: number, userId: string) {
-    return await prisma.$transaction(async (tx) => {
+    const res = await prisma.$transaction(async (tx) => {
       const existingSnack = await tx.snack.findFirst({
         where: { id: snackId, archivedAt: null },
       });
@@ -425,12 +450,15 @@ export class SnackService {
 
       const updatedSnack = updatedRows[0];
 
-      await tx.activity.create({
+      const activity = await tx.activity.create({
         data: {
           userId,
           snackId,
           action: ActivityAction.RESTOCKED,
           amount,
+        },
+        include: {
+          user: { select: { name: true } },
         },
       });
 
@@ -438,7 +466,7 @@ export class SnackService {
       const images = rawImages.length > 0 ? rawImages : (updatedSnack.imageUrl ? [updatedSnack.imageUrl] : []);
       const imageUrl = updatedSnack.imageUrl || (images.length > 0 ? images[0] : null);
 
-      return {
+      const result = {
         id: updatedSnack.id,
         name: updatedSnack.name,
         category: updatedSnack.category,
@@ -449,7 +477,28 @@ export class SnackService {
         images,
         status: getSnackStatus(updatedSnack.quantity, updatedSnack.lowStockThreshold),
       };
+
+      return { result, activity };
     });
+
+    // Real-time SSE Broadcasts
+    EventsService.broadcastStockUpdated({
+      snackId: res.result.id,
+      snackName: res.result.name,
+      quantity: res.result.quantity,
+      lowStockThreshold: res.result.lowStockThreshold,
+      status: res.result.status,
+    });
+    EventsService.broadcastActivityNew({
+      id: res.activity.id,
+      userName: res.activity.user?.name || 'Admin',
+      snackName: res.result.name,
+      action: 'RESTOCKED',
+      amount,
+      createdAt: res.activity.createdAt,
+    });
+
+    return res.result;
   }
 
   /**
@@ -457,7 +506,7 @@ export class SnackService {
    * If any snack fails stock check, whole transaction aborts and raises 409.
    */
   static async checkoutSnacks(userId: string, items: Array<{ snackId: string; amount: number }>) {
-    return await prisma.$transaction(async (tx) => {
+    const checkoutResults = await prisma.$transaction(async (tx) => {
       const results = [];
 
       for (const item of items) {
@@ -501,12 +550,15 @@ export class SnackService {
 
         const updatedSnack = updatedRows[0];
 
-        await tx.activity.create({
+        const activity = await tx.activity.create({
           data: {
             userId,
             snackId: item.snackId,
             action: ActivityAction.CONSUMED,
             amount: item.amount,
+          },
+          include: {
+            user: { select: { name: true } },
           },
         });
 
@@ -515,21 +567,45 @@ export class SnackService {
         const imageUrl = updatedSnack.imageUrl || (images.length > 0 ? images[0] : null);
 
         results.push({
-          id: updatedSnack.id,
-          name: updatedSnack.name,
-          category: updatedSnack.category,
-          quantity: updatedSnack.quantity,
-          lowStockThreshold: updatedSnack.lowStockThreshold,
-          calories: updatedSnack.calories,
-          imageUrl,
-          images,
-          amountConsumed: item.amount,
-          status: getSnackStatus(updatedSnack.quantity, updatedSnack.lowStockThreshold),
+          snack: {
+            id: updatedSnack.id,
+            name: updatedSnack.name,
+            category: updatedSnack.category,
+            quantity: updatedSnack.quantity,
+            lowStockThreshold: updatedSnack.lowStockThreshold,
+            calories: updatedSnack.calories,
+            imageUrl,
+            images,
+            amountConsumed: item.amount,
+            status: getSnackStatus(updatedSnack.quantity, updatedSnack.lowStockThreshold),
+          },
+          activity,
         });
       }
 
       return results;
     });
+
+    // Real-time SSE Broadcasts for each checked out snack
+    for (const res of checkoutResults) {
+      EventsService.broadcastStockUpdated({
+        snackId: res.snack.id,
+        snackName: res.snack.name,
+        quantity: res.snack.quantity,
+        lowStockThreshold: res.snack.lowStockThreshold,
+        status: res.snack.status,
+      });
+      EventsService.broadcastActivityNew({
+        id: res.activity.id,
+        userName: res.activity.user?.name || 'Member',
+        snackName: res.snack.name,
+        action: 'CONSUMED',
+        amount: res.snack.amountConsumed,
+        createdAt: res.activity.createdAt,
+      });
+    }
+
+    return checkoutResults.map((r) => r.snack);
   }
 
   /**
@@ -549,7 +625,7 @@ export class SnackService {
         throw new ApiError(409, 'DUPLICATE_NAME', 'A snack with this name already exists');
       }
       // If archived, unarchive and update
-      return await prisma.$transaction(async (tx) => {
+      const unarchivedResult = await prisma.$transaction(async (tx) => {
         const unarchived = await tx.snack.update({
           where: { id: existing.id },
           data: {
@@ -588,9 +664,29 @@ export class SnackService {
           updatedAt: unarchived.updatedAt,
         };
       });
+
+      EventsService.broadcastSnackMutated({
+        action: 'CREATED',
+        snack: {
+          id: unarchivedResult.id,
+          name: unarchivedResult.name,
+          category: unarchivedResult.category,
+          quantity: unarchivedResult.quantity,
+          lowStockThreshold: unarchivedResult.lowStockThreshold,
+        },
+      });
+      EventsService.broadcastStockUpdated({
+        snackId: unarchivedResult.id,
+        snackName: unarchivedResult.name,
+        quantity: unarchivedResult.quantity,
+        lowStockThreshold: unarchivedResult.lowStockThreshold,
+        status: unarchivedResult.status,
+      });
+
+      return unarchivedResult;
     }
 
-    return await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx) => {
       const snack = await tx.snack.create({
         data: {
           name: input.name,
@@ -628,6 +724,26 @@ export class SnackService {
         updatedAt: snack.updatedAt,
       };
     });
+
+    EventsService.broadcastSnackMutated({
+      action: 'CREATED',
+      snack: {
+        id: created.id,
+        name: created.name,
+        category: created.category,
+        quantity: created.quantity,
+        lowStockThreshold: created.lowStockThreshold,
+      },
+    });
+    EventsService.broadcastStockUpdated({
+      snackId: created.id,
+      snackName: created.name,
+      quantity: created.quantity,
+      lowStockThreshold: created.lowStockThreshold,
+      status: created.status,
+    });
+
+    return created;
   }
 
   /**
@@ -670,7 +786,7 @@ export class SnackService {
     const images = rawImages.length > 0 ? rawImages : (updated.imageUrl ? [updated.imageUrl] : []);
     const imageUrl = updated.imageUrl || (images.length > 0 ? images[0] : null);
 
-    return {
+    const result = {
       id: updated.id,
       name: updated.name,
       category: updated.category,
@@ -683,6 +799,26 @@ export class SnackService {
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
     };
+
+    EventsService.broadcastSnackMutated({
+      action: 'UPDATED',
+      snack: {
+        id: result.id,
+        name: result.name,
+        category: result.category,
+        quantity: result.quantity,
+        lowStockThreshold: result.lowStockThreshold,
+      },
+    });
+    EventsService.broadcastStockUpdated({
+      snackId: result.id,
+      snackName: result.name,
+      quantity: result.quantity,
+      lowStockThreshold: result.lowStockThreshold,
+      status: result.status,
+    });
+
+    return result;
   }
 
   /**
@@ -700,6 +836,11 @@ export class SnackService {
     await prisma.snack.update({
       where: { id },
       data: { archivedAt: new Date() },
+    });
+
+    EventsService.broadcastSnackMutated({
+      action: 'ARCHIVED',
+      snack: { id, name: existing.name },
     });
 
     return { success: true };
@@ -736,6 +877,7 @@ export class SnackService {
     }
 
     const voteCount = await prisma.vote.count({ where: { snackId } });
+    EventsService.broadcastVoteUpdated({ snackId, voteCount });
     return {
       snackId,
       voteCount,
@@ -763,6 +905,7 @@ export class SnackService {
     });
 
     const voteCount = await prisma.vote.count({ where: { snackId } });
+    EventsService.broadcastVoteUpdated({ snackId, voteCount });
     return {
       snackId,
       voteCount,

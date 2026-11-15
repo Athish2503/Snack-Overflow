@@ -3,6 +3,7 @@ import { SnackController } from './snack.controller.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { requireAdmin } from '../../middleware/authorize.js';
 import { validate, validateQuery } from '../../middleware/validate.js';
+import { idempotency } from '../../middleware/idempotency.js';
 import {
   snackQuerySchema,
   inventoryMutationSchema,
@@ -21,6 +22,7 @@ router.get('/summary', authenticate, asyncHandler(SnackController.getSummary));
 router.post(
   '/checkout',
   authenticate,
+  idempotency(),
   validate(checkoutSchema),
   asyncHandler(SnackController.checkout)
 );
@@ -38,6 +40,7 @@ router.delete('/:id', authenticate, requireAdmin, asyncHandler(SnackController.d
 router.post(
   '/:id/consume',
   authenticate,
+  idempotency(),
   validate(inventoryMutationSchema),
   asyncHandler(SnackController.consumeSnack)
 );

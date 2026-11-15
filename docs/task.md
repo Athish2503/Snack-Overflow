@@ -241,14 +241,14 @@ Use this file as the source of truth for implementation progress. Mark a checkbo
 **Priority:** P3
 
 Choose only what can be completed and tested safely:
-- [ ] Docker Compose for database, API, and frontend.
+- [x] Docker Compose for database, API, and frontend.
 - [x] Admin-only paginated activity page.
-- [ ] Optimistic UI with rollback on failure.
-- [ ] Server-side sorting by name, quantity, or votes.
-- [ ] Idempotency-Key support for consume retries.
-- [ ] CI pipeline for lint, type-check, tests, and build.
+- [x] Optimistic UI with rollback on failure.
+- [x] Server-side sorting by name, quantity, or votes.
+- [x] Idempotency-Key support for consume retries.
+- [x] CI pipeline for lint, type-check, tests, and build.
 - [ ] Live deployment.
-- [ ] WebSocket/SSE real-time updates.
+- [x] WebSocket/SSE real-time updates.
 
 Do not sacrifice correctness or submission readiness for bonus features.
 

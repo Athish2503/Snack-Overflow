@@ -12,8 +12,8 @@ interface FilterBarProps {
   onCategoryChange: (category?: SnackCategory) => void;
   status?: SnackStatus;
   onStatusChange: (status?: SnackStatus) => void;
-  sortBy?: 'name' | 'quantity' | 'createdAt';
-  onSortChange: (sort?: 'name' | 'quantity' | 'createdAt') => void;
+  sortBy?: 'name' | 'quantity' | 'createdAt' | 'votes';
+  onSortChange: (sort?: 'name' | 'quantity' | 'createdAt' | 'votes') => void;
   onClearAll: () => void;
 }
 
@@ -184,7 +184,7 @@ export function FilterBar({
           <div style={{ position: 'relative' }}>
             <select
               value={sortBy}
-              onChange={(e) => onSortChange(e.target.value as 'name' | 'quantity' | 'createdAt')}
+              onChange={(e) => onSortChange(e.target.value as 'name' | 'quantity' | 'createdAt' | 'votes')}
               aria-label="Sort snacks"
               className="sticker focus-ring"
               style={{
@@ -202,6 +202,7 @@ export function FilterBar({
               }}
             >
               <option value="name">Sort: Name (A–Z)</option>
+              <option value="votes">Sort: Most Voted</option>
               <option value="quantity">Sort: Stock Quantity</option>
               <option value="createdAt">Sort: Recently Added</option>
             </select>
@@ -518,7 +519,7 @@ export function FilterBar({
               </label>
               <select
                 value={sortBy}
-                onChange={(e) => onSortChange(e.target.value as 'name' | 'quantity' | 'createdAt')}
+                onChange={(e) => onSortChange(e.target.value as 'name' | 'quantity' | 'createdAt' | 'votes')}
                 style={{
                   width: '100%',
                   padding: '12px 14px',
@@ -530,6 +531,7 @@ export function FilterBar({
                 }}
               >
                 <option value="name">Name (A–Z)</option>
+                <option value="votes">Most Voted</option>
                 <option value="quantity">Stock Quantity</option>
                 <option value="createdAt">Recently Added</option>
               </select>
