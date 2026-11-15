@@ -4,23 +4,17 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('[Seed] Starting database revamp & seed...');
+  console.log('[Seed] Ensuring database setup & seed...');
 
-  // 1. Clean existing snacks, activities, and votes
-  console.log('[Seed] Clearing old snacks, activities, and votes...');
-  await prisma.vote.deleteMany();
-  await prisma.activity.deleteMany();
-  await prisma.snack.deleteMany();
-
-  // 2. Hash passwords for demo accounts
+  // 1. Hash passwords for demo accounts
   const saltRounds = 10;
   const adminPasswordHash = await bcrypt.hash('admin123', saltRounds);
   const memberPasswordHash = await bcrypt.hash('member123', saltRounds);
 
-  // 3. Upsert Admin User
+  // 2. Upsert Admin User
   const admin = await prisma.user.upsert({
     where: { email: 'admin@snackoverflow.local' },
-    update: { password: adminPasswordHash, role: Role.ADMIN },
+    update: {},
     create: {
       name: 'Pantry Admin',
       email: 'admin@snackoverflow.local',
@@ -28,12 +22,12 @@ async function main() {
       role: Role.ADMIN,
     },
   });
-  console.log(`[Seed] Upserted Admin: ${admin.email}`);
+  console.log(`[Seed] Ensured Admin: ${admin.email}`);
 
-  // 4. Upsert Member User
+  // 3. Upsert Member User
   const member = await prisma.user.upsert({
     where: { email: 'member@snackoverflow.local' },
-    update: { password: memberPasswordHash, role: Role.MEMBER },
+    update: {},
     create: {
       name: 'Snack Dev',
       email: 'member@snackoverflow.local',
@@ -41,7 +35,7 @@ async function main() {
       role: Role.MEMBER,
     },
   });
-  console.log(`[Seed] Upserted Member: ${member.email}`);
+  console.log(`[Seed] Ensured Member: ${member.email}`);
 
   // 5. Seed revamped snacks with calories, images, and multi-image carousels
   const snacksData = [
@@ -194,55 +188,61 @@ async function main() {
 
   const createdSnacks = [];
   for (const snackData of snacksData) {
-    const snack = await prisma.snack.create({
-      data: snackData,
+    let snack = await prisma.snack.findUnique({
+      where: { name: snackData.name },
     });
+    if (!snack) {
+      snack = await prisma.snack.create({
+        data: snackData,
+      });
+      if (snackData.quantity > 0) {
+        await prisma.activity.create({
+          data: {
+            userId: admin.id,
+            snackId: snack.id,
+            action: ActivityAction.RESTOCKED,
+            amount: snackData.quantity,
+          },
+        });
+      }
+    }
     createdSnacks.push(snack);
+  }
+  console.log(`[Seed] Verified ${createdSnacks.length} snacks in database.`);
 
-    // Initial restock activity
-    if (snackData.quantity > 0) {
-      await prisma.activity.create({
+  // 6. Cast initial votes if no votes exist yet
+  const existingVotes = await prisma.vote.count();
+  if (existingVotes === 0) {
+    const seaSaltChoc = createdSnacks.find((s) => s.name === 'Artisanal Sea Salt Dark Chocolate');
+    if (seaSaltChoc) {
+      await prisma.vote.create({
         data: {
-          userId: admin.id,
-          snackId: snack.id,
-          action: ActivityAction.RESTOCKED,
-          amount: snackData.quantity,
+          userId: member.id,
+          snackId: seaSaltChoc.id,
         },
       });
+      await prisma.vote.create({
+        data: {
+          userId: admin.id,
+          snackId: seaSaltChoc.id,
+        },
+      });
+      console.log(`[Seed] Seeded initial votes for "${seaSaltChoc.name}".`);
+    }
+
+    const greenJuice = createdSnacks.find((s) => s.name === 'Cold-Pressed Ginger & Green Apple');
+    if (greenJuice) {
+      await prisma.vote.create({
+        data: {
+          userId: member.id,
+          snackId: greenJuice.id,
+        },
+      });
+      console.log(`[Seed] Seeded initial vote for "${greenJuice.name}".`);
     }
   }
-  console.log(`[Seed] Seeded ${createdSnacks.length} revamped snacks with calories and uniform images.`);
 
-  // 6. Cast votes to give a prominent Snack of the Week
-  const seaSaltChoc = createdSnacks.find((s) => s.name === 'Artisanal Sea Salt Dark Chocolate');
-  if (seaSaltChoc) {
-    await prisma.vote.create({
-      data: {
-        userId: member.id,
-        snackId: seaSaltChoc.id,
-      },
-    });
-    await prisma.vote.create({
-      data: {
-        userId: admin.id,
-        snackId: seaSaltChoc.id,
-      },
-    });
-    console.log(`[Seed] Seeded 2 votes for "${seaSaltChoc.name}" (Snack of the Week).`);
-  }
-
-  const greenJuice = createdSnacks.find((s) => s.name === 'Cold-Pressed Ginger & Green Apple');
-  if (greenJuice) {
-    await prisma.vote.create({
-      data: {
-        userId: member.id,
-        snackId: greenJuice.id,
-      },
-    });
-    console.log(`[Seed] Seeded 1 vote for "${greenJuice.name}".`);
-  }
-
-  console.log('[Seed] Revamp database seeding completed successfully.');
+  console.log('[Seed] Database initialization completed successfully.');
 }
 
 main()
