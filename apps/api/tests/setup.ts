@@ -26,6 +26,7 @@ export async function cleanupTestSnacks() {
     if (testSnacks.length > 0) {
       const ids = testSnacks.map((s) => s.id);
       await prisma.vote.deleteMany({ where: { snackId: { in: ids } } });
+      await prisma.favorite.deleteMany({ where: { snackId: { in: ids } } });
       await prisma.activity.deleteMany({ where: { snackId: { in: ids } } });
       await prisma.snack.deleteMany({ where: { id: { in: ids } } });
     }

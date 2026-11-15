@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Cookie, TrendingUp, Package, ShoppingBag, Heart } from 'lucide-react';
+import { Home, Cookie, TrendingUp, Package, ShoppingBag, Bookmark } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
@@ -102,7 +102,7 @@ export function Sidebar() {
   const navItems: NavItemDef[] = [
     { href: '/dashboard', icon: <Home size={20} />, label: 'Home' },
     { href: '/snacks', icon: <Cookie size={20} />, label: 'Snacks' },
-    { href: '/favorites', icon: <Heart size={20} />, label: 'Favorites' },
+    { href: '/favorites', icon: <Bookmark size={20} />, label: 'Favorites' },
     ...(isAdmin
       ? [{ href: '/activity', icon: <TrendingUp size={20} />, label: 'Activity' }]
       : []),

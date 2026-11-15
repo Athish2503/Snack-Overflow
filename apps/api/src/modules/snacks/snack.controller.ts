@@ -107,4 +107,24 @@ export class SnackController {
       data: result,
     });
   }
+
+  static async favoriteSnack(req: AuthRequest, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const userId = req.user!.id;
+
+    const result = await SnackService.favoriteSnack(id, userId);
+    res.status(200).json({
+      data: result,
+    });
+  }
+
+  static async unfavoriteSnack(req: AuthRequest, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const userId = req.user!.id;
+
+    const result = await SnackService.unfavoriteSnack(id, userId);
+    res.status(200).json({
+      data: result,
+    });
+  }
 }

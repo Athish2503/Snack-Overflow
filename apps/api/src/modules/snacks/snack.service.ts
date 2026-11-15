@@ -16,6 +16,7 @@ export interface FormattedSnack {
   status: SnackStatus;
   voteCount: number;
   hasVoted: boolean;
+  isFavorite: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,7 +48,7 @@ export class SnackService {
     }
 
     if (favoritesOnly && currentUserId) {
-      whereConditions.push(Prisma.sql`EXISTS (SELECT 1 FROM "Vote" fav WHERE fav."snackId" = s."id" AND fav."userId" = ${currentUserId})`);
+      whereConditions.push(Prisma.sql`EXISTS (SELECT 1 FROM "Favorite" fav WHERE fav."snackId" = s."id" AND fav."userId" = ${currentUserId})`);
     }
 
     const whereClause = Prisma.sql`WHERE ${Prisma.join(whereConditions, ' AND ')}`;
@@ -84,6 +85,7 @@ export class SnackService {
         updatedAt: Date;
         voteCount: bigint;
         hasVoted: boolean;
+        isFavorite: boolean;
       }>
     >`
       SELECT 
@@ -98,7 +100,8 @@ export class SnackService {
         s."createdAt",
         s."updatedAt",
         COALESCE(v.vote_count, 0) as "voteCount",
-        CASE WHEN uv."id" IS NOT NULL THEN true ELSE false END as "hasVoted"
+        CASE WHEN uv."id" IS NOT NULL THEN true ELSE false END as "hasVoted",
+        CASE WHEN uf."id" IS NOT NULL THEN true ELSE false END as "isFavorite"
       FROM "Snack" s
       LEFT JOIN (
         SELECT "snackId", COUNT(*) as vote_count
@@ -106,6 +109,7 @@ export class SnackService {
         GROUP BY "snackId"
       ) v ON v."snackId" = s."id"
       LEFT JOIN "Vote" uv ON uv."snackId" = s."id" AND uv."userId" = ${userIdParam}
+      LEFT JOIN "Favorite" uf ON uf."snackId" = s."id" AND uf."userId" = ${userIdParam}
       ${whereClause}
       ORDER BY ${orderByColumn} ${orderDirection}
       LIMIT ${limit}
@@ -128,6 +132,7 @@ export class SnackService {
         status: getSnackStatus(r.quantity, r.lowStockThreshold),
         voteCount: Number(r.voteCount),
         hasVoted: Boolean(r.hasVoted),
+        isFavorite: Boolean(r.isFavorite),
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
       };
@@ -149,6 +154,12 @@ export class SnackService {
       where: { id, archivedAt: null },
       include: {
         votes: currentUserId
+          ? {
+              where: { userId: currentUserId },
+              select: { id: true },
+            }
+          : false,
+        favorites: currentUserId
           ? {
               where: { userId: currentUserId },
               select: { id: true },
@@ -179,7 +190,8 @@ export class SnackService {
       images,
       status: getSnackStatus(snack.quantity, snack.lowStockThreshold),
       voteCount: snack._count.votes,
-      hasVoted: snack.votes && snack.votes.length > 0,
+      hasVoted: Boolean(snack.votes && snack.votes.length > 0),
+      isFavorite: Boolean(snack.favorites && snack.favorites.length > 0),
       createdAt: snack.createdAt,
       updatedAt: snack.updatedAt,
     };
@@ -702,6 +714,68 @@ export class SnackService {
       snackId,
       voteCount,
       hasVoted: false,
+    };
+  }
+
+  /**
+   * User Favorite: Bookmark a snack for quick access (personal bookmark).
+   * Relies on the database composite unique constraint (userId, snackId) on Favorite.
+   */
+  static async favoriteSnack(snackId: string, userId: string) {
+    const snack = await prisma.snack.findFirst({
+      where: { id: snackId, archivedAt: null },
+    });
+
+    if (!snack) {
+      throw new ApiError(404, 'NOT_FOUND', 'Snack not found');
+    }
+
+    try {
+      await prisma.favorite.create({
+        data: {
+          userId,
+          snackId,
+        },
+      });
+    } catch (err: any) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        // Idempotent favorite: already saved
+        return {
+          snackId,
+          isFavorite: true,
+        };
+      }
+      throw err;
+    }
+
+    return {
+      snackId,
+      isFavorite: true,
+    };
+  }
+
+  /**
+   * User Favorite: Remove snack from bookmarks. Idempotent.
+   */
+  static async unfavoriteSnack(snackId: string, userId: string) {
+    const snack = await prisma.snack.findFirst({
+      where: { id: snackId, archivedAt: null },
+    });
+
+    if (!snack) {
+      throw new ApiError(404, 'NOT_FOUND', 'Snack not found');
+    }
+
+    await prisma.favorite.deleteMany({
+      where: {
+        snackId,
+        userId,
+      },
+    });
+
+    return {
+      snackId,
+      isFavorite: false,
     };
   }
 }

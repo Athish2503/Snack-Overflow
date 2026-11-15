@@ -27,6 +27,7 @@ export interface Snack {
   status: SnackStatus;
   voteCount: number;
   hasVoted: boolean;
+  isFavorite?: boolean;
   createdAt: string;
   updatedAt: string;
 }

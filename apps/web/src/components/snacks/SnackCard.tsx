@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Heart, Minus, Plus, Flame, ShoppingBag } from 'lucide-react';
+import { ThumbsUp, Bookmark, Minus, Plus, Flame, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { Snack } from '@/lib/types';
@@ -30,11 +30,18 @@ export function SnackCard({ snack, onUpdated, onSelect }: SnackCardProps) {
   const [isAddPressed, setIsAddPressed] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
-  // Local optimistic vote state
+  // Local optimistic vote state (Public popularity count)
   const [localVote, setLocalVote] = useState<{ id: string; hasVoted: boolean; voteCount: number } | null>(null);
   const optimisticVote = (localVote && localVote.id === snack.id)
     ? localVote
     : { id: snack.id, hasVoted: snack.hasVoted, voteCount: snack.voteCount };
+
+  // Local optimistic favorite state (Personal bookmark)
+  const [isFavoriting, setIsFavoriting] = useState(false);
+  const [localFav, setLocalFav] = useState<{ id: string; isFavorite: boolean } | null>(null);
+  const optimisticFav = (localFav && localFav.id === snack.id)
+    ? localFav.isFavorite
+    : Boolean(snack.isFavorite);
 
   const isGone = snack.quantity <= 0;
   const isRunningLow = snack.status === 'running_low';
@@ -91,6 +98,37 @@ export function SnackCard({ snack, onUpdated, onSelect }: SnackCardProps) {
     } finally {
       setIsVoting(false);
       setTimeout(() => setHeartAnim(false), 300);
+    }
+  }
+
+  // Handle personal favorite bookmark toggle
+  async function handleFavoriteToggle(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (isFavoriting) return;
+    setIsFavoriting(true);
+
+    const prevFav = optimisticFav;
+    const nextFav = !prevFav;
+
+    // Optimistic update
+    setLocalFav({ id: snack.id, isFavorite: nextFav });
+
+    try {
+      if (nextFav) {
+        await api.post(`/snacks/${snack.id}/favorite`);
+        toast.success(`Saved "${snack.name}" to your favorites!`);
+      } else {
+        await api.delete(`/snacks/${snack.id}/favorite`);
+        toast.info(`Removed "${snack.name}" from your favorites.`);
+      }
+      queryClient.invalidateQueries({ queryKey: ['snacks'] });
+      onUpdated?.();
+    } catch {
+      // Rollback
+      setLocalFav({ id: snack.id, isFavorite: prevFav });
+      toast.error('Could not update favorites. Please try again.');
+    } finally {
+      setIsFavoriting(false);
     }
   }
 
@@ -318,38 +356,72 @@ export function SnackCard({ snack, onUpdated, onSelect }: SnackCardProps) {
                 </div>
               }
               topRightBadge={
-                <button
-                  type="button"
-                  onClick={handleVoteToggle}
-                  disabled={isVoting}
-                  className="focus-ring"
-                  aria-label={`${optimisticVote.hasVoted ? 'Remove vote from' : 'Vote for'} ${snack.name}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '5px 9px',
-                    borderRadius: 100,
-                    background: optimisticVote.hasVoted ? 'var(--accent-soft)' : 'var(--surface)',
-                    border: `1.5px solid ${optimisticVote.hasVoted ? 'var(--accent)' : 'var(--ink)'}`,
-                    boxShadow: '1.5px 1.5px 0 var(--ink)',
-                    cursor: 'pointer',
-                    color: optimisticVote.hasVoted ? 'var(--accent)' : 'var(--ink)',
-                    fontSize: 12,
-                    fontWeight: 800,
-                    fontFamily: 'var(--font-jetbrains-mono), monospace',
-                    fontVariantNumeric: 'tabular-nums',
-                    transition: 'all 120ms ease',
-                  }}
-                >
-                  <Heart
-                    size={14}
-                    className={heartAnim ? 'heart-pop' : ''}
-                    fill={optimisticVote.hasVoted ? 'var(--accent)' : 'none'}
-                    stroke={optimisticVote.hasVoted ? 'var(--accent)' : 'currentColor'}
-                  />
-                  <span>{optimisticVote.voteCount}</span>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {/* Personal Bookmark: Favorite toggle */}
+                  <button
+                    type="button"
+                    onClick={handleFavoriteToggle}
+                    disabled={isFavoriting}
+                    className="focus-ring"
+                    aria-label={`${optimisticFav ? 'Remove from' : 'Save to'} favorites`}
+                    title={optimisticFav ? 'Favorited' : 'Bookmark as favorite'}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 28,
+                      height: 28,
+                      borderRadius: 100,
+                      background: optimisticFav ? 'var(--accent)' : 'var(--surface)',
+                      border: `1.5px solid ${optimisticFav ? 'var(--accent)' : 'var(--ink)'}`,
+                      boxShadow: '1.5px 1.5px 0 var(--ink)',
+                      cursor: 'pointer',
+                      color: optimisticFav ? '#ffffff' : 'var(--ink)',
+                      transition: 'all 120ms ease',
+                    }}
+                  >
+                    <Bookmark
+                      size={13}
+                      fill={optimisticFav ? '#ffffff' : 'none'}
+                      stroke={optimisticFav ? '#ffffff' : 'currentColor'}
+                    />
+                  </button>
+
+                  {/* Public Popularity Signal: Vote count toggle */}
+                  <button
+                    type="button"
+                    onClick={handleVoteToggle}
+                    disabled={isVoting}
+                    className="focus-ring"
+                    aria-label={`${optimisticVote.hasVoted ? 'Remove vote from' : 'Vote for'} ${snack.name}`}
+                    title={optimisticVote.hasVoted ? 'You voted for this snack' : 'Vote to stock more'}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '4px 8px',
+                      borderRadius: 100,
+                      background: optimisticVote.hasVoted ? 'var(--primary-soft)' : 'var(--surface)',
+                      border: `1.5px solid ${optimisticVote.hasVoted ? 'var(--primary)' : 'var(--ink)'}`,
+                      boxShadow: '1.5px 1.5px 0 var(--ink)',
+                      cursor: 'pointer',
+                      color: optimisticVote.hasVoted ? 'var(--primary)' : 'var(--ink)',
+                      fontSize: 12,
+                      fontWeight: 800,
+                      fontFamily: 'var(--font-jetbrains-mono), monospace',
+                      fontVariantNumeric: 'tabular-nums',
+                      transition: 'all 120ms ease',
+                    }}
+                  >
+                    <ThumbsUp
+                      size={13}
+                      className={heartAnim ? 'heart-pop' : ''}
+                      fill={optimisticVote.hasVoted ? 'var(--primary)' : 'none'}
+                      stroke={optimisticVote.hasVoted ? 'var(--primary)' : 'currentColor'}
+                    />
+                    <span>{optimisticVote.voteCount}</span>
+                  </button>
+                </div>
               }
             />
           </div>

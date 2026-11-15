@@ -79,14 +79,14 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
 
       {/* Optional Top Left Overlay Badge (Category badge) */}
       {overlayBadge && (
-        <div className="absolute top-2.5 left-2.5 right-14 z-10 pointer-events-none overflow-hidden">
+        <div className="absolute top-2.5 left-2.5 right-24 z-10 pointer-events-none overflow-hidden">
           {overlayBadge}
         </div>
       )}
 
       {/* Optional Top Right Badge (Vote chip or Heart) */}
       {topRightBadge && (
-        <div className="absolute top-2.5 right-2.5 z-10">
+        <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
           {topRightBadge}
         </div>
       )}

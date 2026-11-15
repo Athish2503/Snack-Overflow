@@ -50,8 +50,12 @@ router.post(
   asyncHandler(SnackController.restockSnack)
 );
 
-// Voting
+// Voting (Public popularity signal -> Snack of the week & popularity count)
 router.post('/:id/vote', authenticate, asyncHandler(SnackController.voteSnack));
 router.delete('/:id/vote', authenticate, asyncHandler(SnackController.unvoteSnack));
+
+// Favorites (Personal bookmark -> Quick access for the user)
+router.post('/:id/favorite', authenticate, asyncHandler(SnackController.favoriteSnack));
+router.delete('/:id/favorite', authenticate, asyncHandler(SnackController.unfavoriteSnack));
 
 export default router;

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Heart, Cookie, ArrowLeft, ShoppingBag } from 'lucide-react';
+import { Bookmark, Cookie, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { api } from '@/lib/api';
 import { SnackListResponse, Snack } from '@/lib/types';
 import { SnackCard } from '@/components/snacks/SnackCard';
@@ -73,11 +73,11 @@ export default function FavoritesPage() {
               gap: 10,
             }}
           >
-            <Heart size={28} className="text-[var(--accent)] fill-[var(--accent)]" />
+            <Bookmark size={28} className="text-[var(--accent)] fill-[var(--accent)]" />
             <span>My Favorite Snacks</span>
           </h1>
           <p style={{ margin: '4px 0 0', color: 'var(--ink-muted)', fontSize: 14 }}>
-            All the pantry snacks you&apos;ve voted for. Add them directly to your bag or consume on the spot.
+            Your personal pantry bookmarks. Quick access to grab your usual stash or consume on the spot.
           </p>
         </div>
 
@@ -132,9 +132,9 @@ export default function FavoritesPage() {
       {/* ── Empty State ── */}
       {!isLoading && !isError && snacks.length === 0 && (
         <EmptyState
-          icon={<Heart size={36} color="var(--accent)" />}
-          title="No favorites saved yet"
-          description="Click the heart on any snack card in the pantry to pin it to your favorites list!"
+          icon={<Bookmark size={36} color="var(--accent)" />}
+          title="No favorite bookmarks yet"
+          description="Click the bookmark icon on any snack card in the pantry to pin it to your quick-access favorites list!"
           action={
             <Link
               href="/snacks"

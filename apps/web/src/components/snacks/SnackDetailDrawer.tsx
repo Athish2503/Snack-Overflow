@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Heart, Minus, Plus, ShoppingBag, ShoppingCart, Pencil, Trash2, Flame } from 'lucide-react';
+import { X, ThumbsUp, Bookmark, Minus, Plus, ShoppingBag, ShoppingCart, Pencil, Trash2, Flame } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,6 +37,7 @@ export function SnackDetailDrawer({
   const [amount, setAmount] = useState(1);
   const [isConsuming, setIsConsuming] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
+  const [isFavoriting, setIsFavoriting] = useState(false);
 
   // Admin modal controls
   const [showRestock, setShowRestock] = useState(false);
@@ -94,8 +95,10 @@ export function SnackDetailDrawer({
     try {
       if (snack.hasVoted) {
         await api.delete(`/snacks/${snack.id}/vote`);
+        toast.success(`Removed vote for ${snack.name}`);
       } else {
         await api.post(`/snacks/${snack.id}/vote`);
+        toast.success(`Voted for ${snack.name}!`);
       }
       queryClient.invalidateQueries({ queryKey: ['snacks'] });
       queryClient.invalidateQueries({ queryKey: ['snack-summary'] });
@@ -104,6 +107,28 @@ export function SnackDetailDrawer({
       toast.error('Could not update vote. Please try again.');
     } finally {
       setIsVoting(false);
+    }
+  }
+
+  async function handleFavoriteToggle() {
+    if (!snack || isFavoriting) return;
+    setIsFavoriting(true);
+
+    try {
+      if (snack.isFavorite) {
+        await api.delete(`/snacks/${snack.id}/favorite`);
+        toast.success(`Removed ${snack.name} from Favorites`);
+      } else {
+        await api.post(`/snacks/${snack.id}/favorite`);
+        toast.success(`Saved ${snack.name} to Favorites!`);
+      }
+      queryClient.invalidateQueries({ queryKey: ['snacks'] });
+      queryClient.invalidateQueries({ queryKey: ['snack-summary'] });
+      onUpdated?.();
+    } catch {
+      toast.error('Could not update favorites. Please try again.');
+    } finally {
+      setIsFavoriting(false);
     }
   }
 
@@ -527,38 +552,76 @@ export function SnackDetailDrawer({
               </button>
             </div>
 
-            {/* Vote Button */}
-            <button
-              type="button"
-              onClick={handleVoteToggle}
-              disabled={isVoting}
-              className="sticker focus-ring"
-              style={{
-                width: '100%',
-                height: 44,
-                borderRadius: 'var(--radius-sm)',
-                background: snack.hasVoted ? 'var(--accent-soft)' : 'var(--surface)',
-                color: snack.hasVoted ? 'var(--accent)' : 'var(--ink)',
-                border: '2px solid var(--ink)',
-                boxShadow: 'var(--shadow)',
-                fontSize: 14,
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-            >
-              <Heart
-                size={18}
-                fill={snack.hasVoted ? 'var(--accent)' : 'none'}
-                stroke={snack.hasVoted ? 'var(--accent)' : 'currentColor'}
-              />
-              <span>
-                {snack.hasVoted ? 'Voted' : 'Vote for this snack'} ({snack.voteCount})
-              </span>
-            </button>
+            {/* Actions: Public Vote & Personal Bookmark (Favorites) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {/* Vote Button (Public popularity signal) */}
+              <button
+                type="button"
+                onClick={handleVoteToggle}
+                disabled={isVoting}
+                className="sticker focus-ring"
+                aria-label={snack.hasVoted ? 'Remove vote' : 'Vote for snack'}
+                title="Public vote — helps decide Snack of the Week"
+                style={{
+                  height: 44,
+                  borderRadius: 'var(--radius-sm)',
+                  background: snack.hasVoted ? '#fed7aa' : 'var(--surface)',
+                  color: snack.hasVoted ? '#9a3412' : 'var(--ink)',
+                  border: '2px solid var(--ink)',
+                  boxShadow: 'var(--shadow)',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <ThumbsUp
+                  size={16}
+                  fill={snack.hasVoted ? '#ea580c' : 'none'}
+                  stroke={snack.hasVoted ? '#ea580c' : 'currentColor'}
+                />
+                <span>
+                  {snack.hasVoted ? 'Voted' : 'Vote'} ({snack.voteCount})
+                </span>
+              </button>
+
+              {/* Favorite Button (Personal bookmark) */}
+              <button
+                type="button"
+                onClick={handleFavoriteToggle}
+                disabled={isFavoriting}
+                className="sticker focus-ring"
+                aria-label={snack.isFavorite ? 'Remove from favorites' : 'Save to favorites'}
+                title="Personal favorite — saves to your private Favorites tab"
+                style={{
+                  height: 44,
+                  borderRadius: 'var(--radius-sm)',
+                  background: snack.isFavorite ? 'var(--accent-soft)' : 'var(--surface)',
+                  color: snack.isFavorite ? 'var(--accent)' : 'var(--ink)',
+                  border: '2px solid var(--ink)',
+                  boxShadow: 'var(--shadow)',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <Bookmark
+                  size={16}
+                  fill={snack.isFavorite ? 'var(--accent)' : 'none'}
+                  stroke={snack.isFavorite ? 'var(--accent)' : 'currentColor'}
+                />
+                <span>
+                  {snack.isFavorite ? 'Saved' : 'Favorite'}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* ADMIN ACTIONS SECTION (Only visible to ADMIN) */}
