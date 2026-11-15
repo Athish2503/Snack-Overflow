@@ -1,0 +1,162 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Home, Cookie, TrendingUp, Package, ShoppingBag } from 'lucide-react';
+import { clsx } from 'clsx';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { ThemeToggle } from './ThemeToggle';
+
+interface NavItemDef {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+}
+
+function NavItem({ href, icon, label }: NavItemDef) {
+  const pathname = usePathname();
+  const isActive = pathname === href || pathname.startsWith(href + '/');
+
+  return (
+    <Link href={href} className={clsx('nav-item focus-ring', isActive && 'active')}>
+      <span style={{ width: 20, height: 20, display: 'flex', alignItems: 'center' }}>
+        {icon}
+      </span>
+      {label}
+    </Link>
+  );
+}
+
+function RailItem({ href, icon, label }: NavItemDef) {
+  const pathname = usePathname();
+  const isActive = pathname === href || pathname.startsWith(href + '/');
+
+  return (
+    <Link href={href} className={clsx('rail-item focus-ring', isActive && 'active')} title={label}>
+      <span style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {icon}
+      </span>
+      <span className="rail-tooltip">{label}</span>
+    </Link>
+  );
+}
+
+function SidebarBagButton() {
+  const { openCart, totalItems, isBouncing } = useCart();
+  return (
+    <button
+      type="button"
+      onClick={openCart}
+      aria-label={`Open pantry bag (${totalItems} items)`}
+      className={`nav-item focus-ring cursor-pointer justify-between w-full text-left ${
+        isBouncing ? 'bg-[var(--primary-soft)]' : ''
+      }`}
+      style={{ background: 'none', border: 'none', font: 'inherit' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ width: 20, height: 20, display: 'flex', alignItems: 'center' }}>
+          <ShoppingBag size={20} className={isBouncing ? 'cart-bounce text-[var(--primary)]' : ''} />
+        </span>
+        <span>Pantry Bag</span>
+      </div>
+      {totalItems > 0 && (
+        <span
+          className={`min-w-[20px] h-[20px] px-1.5 rounded-full bg-[var(--primary)] text-white text-[11px] font-black font-heading flex items-center justify-center border border-[var(--ink)] ${
+            isBouncing ? 'cart-badge-bounce' : ''
+          }`}
+        >
+          {totalItems}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function RailBagButton() {
+  const { openCart, totalItems, isBouncing } = useCart();
+  return (
+    <button
+      type="button"
+      onClick={openCart}
+      aria-label={`Open pantry bag (${totalItems} items)`}
+      className="rail-item focus-ring relative cursor-pointer"
+      title="Pantry Bag"
+      style={{ background: 'none', border: 'none' }}
+    >
+      <span style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <ShoppingBag size={20} className={isBouncing ? 'cart-bounce' : ''} />
+      </span>
+      {totalItems > 0 && (
+        <span
+          className={`absolute top-1.5 right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[var(--primary)] text-white text-[9px] font-black flex items-center justify-center border border-[var(--ink)] ${
+            isBouncing ? 'cart-badge-bounce' : ''
+          }`}
+        >
+          {totalItems}
+        </span>
+      )}
+      <span className="rail-tooltip">Pantry Bag</span>
+    </button>
+  );
+}
+
+export function Sidebar() {
+  const { isAdmin } = useAuth();
+
+  const navItems: NavItemDef[] = [
+    { href: '/dashboard', icon: <Home size={20} />, label: 'Home' },
+    { href: '/snacks', icon: <Cookie size={20} />, label: 'Snacks' },
+    ...(isAdmin
+      ? [{ href: '/activity', icon: <TrendingUp size={20} />, label: 'Activity' }]
+      : []),
+  ];
+
+  return (
+    <>
+      {/* Desktop full sidebar (lg+) */}
+      <aside className="sidebar" style={{ display: 'none' }} id="sidebar-full">
+        <div className="sidebar-logo">
+          <span className="logo-snack">SNACK</span>
+          <span className="logo-overflow">OVERFLOW</span>
+          <span className="sidebar-badge">PANTRY</span>
+        </div>
+        <nav className="sidebar-nav">
+          {navItems.map((item) => (
+            <NavItem key={item.href} {...item} />
+          ))}
+          <SidebarBagButton />
+        </nav>
+        <div className="sidebar-bottom">
+          <ThemeToggle />
+        </div>
+      </aside>
+
+      {/* Tablet icon rail (md–lg) */}
+      <aside className="sidebar-rail" style={{ display: 'none' }} id="sidebar-rail">
+        <div className="rail-logo">
+          <Package size={22} color="var(--primary)" strokeWidth={2.4} />
+        </div>
+        {navItems.map((item) => (
+          <RailItem key={item.href} {...item} />
+        ))}
+        <RailBagButton />
+        <div style={{ marginTop: 'auto', paddingBottom: 12 }}>
+          <ThemeToggle compact />
+        </div>
+      </aside>
+
+      {/* CSS to show/hide sidebars at breakpoints */}
+      <style>{`
+        @media (min-width: 768px) {
+          #sidebar-rail { display: flex !important; }
+        }
+        @media (min-width: 1024px) {
+          #sidebar-rail { display: none !important; }
+          #sidebar-full { display: flex !important; }
+        }
+      `}</style>
+    </>
+  );
+}

@@ -1,7 +1,13 @@
 import { Response } from 'express';
 import { SnackService } from './snack.service.js';
 import { AuthRequest } from '../../types/express.js';
-import { SnackQueryInput, InventoryMutationInput, CreateSnackInput, UpdateSnackInput } from './snack.schema.js';
+import {
+  SnackQueryInput,
+  InventoryMutationInput,
+  CreateSnackInput,
+  UpdateSnackInput,
+  CheckoutInput,
+} from './snack.schema.js';
 
 export class SnackController {
   static async getSnacks(req: AuthRequest, res: Response) {
@@ -31,6 +37,17 @@ export class SnackController {
     const updatedSnack = await SnackService.consumeSnack(id, amount, userId);
     res.status(200).json({
       data: updatedSnack,
+    });
+  }
+
+  static async checkout(req: AuthRequest, res: Response) {
+    const { items } = req.body as CheckoutInput;
+    const userId = req.user!.id;
+
+    const results = await SnackService.checkoutSnacks(userId, items);
+    res.status(200).json({
+      data: results,
+      message: 'Checkout successful! Enjoy your snacks.',
     });
   }
 

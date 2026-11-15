@@ -10,6 +10,9 @@ export interface FormattedSnack {
   category: SnackCategory;
   quantity: number;
   lowStockThreshold: number;
+  calories?: number | null;
+  imageUrl?: string | null;
+  images: string[];
   status: SnackStatus;
   voteCount: number;
   hasVoted: boolean;
@@ -70,6 +73,9 @@ export class SnackService {
         category: SnackCategory;
         quantity: number;
         lowStockThreshold: number;
+        calories: number | null;
+        imageUrl: string | null;
+        images: string[];
         createdAt: Date;
         updatedAt: Date;
         voteCount: bigint;
@@ -82,6 +88,9 @@ export class SnackService {
         s."category",
         s."quantity",
         s."lowStockThreshold",
+        s."calories",
+        s."imageUrl",
+        s."images",
         s."createdAt",
         s."updatedAt",
         COALESCE(v.vote_count, 0) as "voteCount",
@@ -99,18 +108,26 @@ export class SnackService {
       OFFSET ${offset}
     `;
 
-    const data: FormattedSnack[] = rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      category: r.category,
-      quantity: r.quantity,
-      lowStockThreshold: r.lowStockThreshold,
-      status: getSnackStatus(r.quantity, r.lowStockThreshold),
-      voteCount: Number(r.voteCount),
-      hasVoted: Boolean(r.hasVoted),
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
-    }));
+    const data: FormattedSnack[] = rows.map((r) => {
+      const rawImages = Array.isArray(r.images) ? r.images : [];
+      const images = rawImages.length > 0 ? rawImages : (r.imageUrl ? [r.imageUrl] : []);
+      const imageUrl = r.imageUrl || (images.length > 0 ? images[0] : null);
+      return {
+        id: r.id,
+        name: r.name,
+        category: r.category,
+        quantity: r.quantity,
+        lowStockThreshold: r.lowStockThreshold,
+        calories: r.calories,
+        imageUrl,
+        images,
+        status: getSnackStatus(r.quantity, r.lowStockThreshold),
+        voteCount: Number(r.voteCount),
+        hasVoted: Boolean(r.hasVoted),
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      };
+    });
 
     return {
       data,
@@ -143,12 +160,19 @@ export class SnackService {
       throw new ApiError(404, 'NOT_FOUND', 'Snack not found');
     }
 
+    const rawImages = Array.isArray(snack.images) ? snack.images : [];
+    const images = rawImages.length > 0 ? rawImages : (snack.imageUrl ? [snack.imageUrl] : []);
+    const imageUrl = snack.imageUrl || (images.length > 0 ? images[0] : null);
+
     return {
       id: snack.id,
       name: snack.name,
       category: snack.category,
       quantity: snack.quantity,
       lowStockThreshold: snack.lowStockThreshold,
+      calories: snack.calories,
+      imageUrl,
+      images,
       status: getSnackStatus(snack.quantity, snack.lowStockThreshold),
       voteCount: snack._count.votes,
       hasVoted: snack.votes && snack.votes.length > 0,
@@ -188,18 +212,26 @@ export class SnackService {
       Array<{
         id: string;
         name: string;
+        category: SnackCategory;
+        calories: number | null;
+        imageUrl: string | null;
+        images: string[];
         weeklyVotes: bigint;
       }>
     >`
       SELECT 
         s."id",
         s."name",
+        s."category",
+        s."calories",
+        s."imageUrl",
+        s."images",
         COUNT(v."id") FILTER (WHERE v."createdAt" >= ${weekStart}) as "weeklyVotes",
         COUNT(v."id") as "lifetimeVotes"
       FROM "Snack" s
       LEFT JOIN "Vote" v ON v."snackId" = s."id"
       WHERE s."archivedAt" IS NULL
-      GROUP BY s."id", s."name"
+      GROUP BY s."id", s."name", s."category", s."calories", s."imageUrl", s."images"
       HAVING COUNT(v."id") FILTER (WHERE v."createdAt" >= ${weekStart}) > 0
       ORDER BY "weeklyVotes" DESC, "lifetimeVotes" DESC, s."name" ASC
       LIMIT 1
@@ -207,9 +239,16 @@ export class SnackService {
 
     let snackOfTheWeek = null;
     if (topSnack.length > 0 && Number(topSnack[0].weeklyVotes) > 0) {
+      const rawImages = Array.isArray(topSnack[0].images) ? topSnack[0].images : [];
+      const images = rawImages.length > 0 ? rawImages : (topSnack[0].imageUrl ? [topSnack[0].imageUrl] : []);
+      const imageUrl = topSnack[0].imageUrl || (images.length > 0 ? images[0] : null);
       snackOfTheWeek = {
         id: topSnack[0].id,
         name: topSnack[0].name,
+        category: topSnack[0].category,
+        calories: topSnack[0].calories,
+        imageUrl,
+        images,
         voteCount: Number(topSnack[0].weeklyVotes),
       };
     }
@@ -229,6 +268,9 @@ export class SnackService {
           category: SnackCategory;
           quantity: number;
           lowStockThreshold: number;
+          calories: number | null;
+          imageUrl: string | null;
+          images: string[];
         }>
       >`
         UPDATE "Snack"
@@ -237,7 +279,7 @@ export class SnackService {
         WHERE "id" = ${snackId}
           AND "archivedAt" IS NULL
           AND "quantity" >= ${amount}
-        RETURNING "id", "name", "category", "quantity", "lowStockThreshold"
+        RETURNING "id", "name", "category", "quantity", "lowStockThreshold", "calories", "imageUrl", "images"
       `;
 
       if (!updatedRows || updatedRows.length === 0) {
@@ -264,12 +306,19 @@ export class SnackService {
         },
       });
 
+      const rawImages = Array.isArray(updatedSnack.images) ? updatedSnack.images : [];
+      const images = rawImages.length > 0 ? rawImages : (updatedSnack.imageUrl ? [updatedSnack.imageUrl] : []);
+      const imageUrl = updatedSnack.imageUrl || (images.length > 0 ? images[0] : null);
+
       return {
         id: updatedSnack.id,
         name: updatedSnack.name,
         category: updatedSnack.category,
         quantity: updatedSnack.quantity,
         lowStockThreshold: updatedSnack.lowStockThreshold,
+        calories: updatedSnack.calories,
+        imageUrl,
+        images,
         status: getSnackStatus(updatedSnack.quantity, updatedSnack.lowStockThreshold),
       };
     });
@@ -292,6 +341,9 @@ export class SnackService {
           category: SnackCategory;
           quantity: number;
           lowStockThreshold: number;
+          calories: number | null;
+          imageUrl: string | null;
+          images: string[];
         }>
       >`
         UPDATE "Snack"
@@ -299,7 +351,7 @@ export class SnackService {
             "updatedAt" = CURRENT_TIMESTAMP
         WHERE "id" = ${snackId}
           AND "archivedAt" IS NULL
-        RETURNING "id", "name", "category", "quantity", "lowStockThreshold"
+        RETURNING "id", "name", "category", "quantity", "lowStockThreshold", "calories", "imageUrl", "images"
       `;
 
       const updatedSnack = updatedRows[0];
@@ -313,14 +365,101 @@ export class SnackService {
         },
       });
 
+      const rawImages = Array.isArray(updatedSnack.images) ? updatedSnack.images : [];
+      const images = rawImages.length > 0 ? rawImages : (updatedSnack.imageUrl ? [updatedSnack.imageUrl] : []);
+      const imageUrl = updatedSnack.imageUrl || (images.length > 0 ? images[0] : null);
+
       return {
         id: updatedSnack.id,
         name: updatedSnack.name,
         category: updatedSnack.category,
         quantity: updatedSnack.quantity,
         lowStockThreshold: updatedSnack.lowStockThreshold,
+        calories: updatedSnack.calories,
+        imageUrl,
+        images,
         status: getSnackStatus(updatedSnack.quantity, updatedSnack.lowStockThreshold),
       };
+    });
+  }
+
+  /**
+   * Checkout a bag of snacks atomically.
+   * If any snack fails stock check, whole transaction aborts and raises 409.
+   */
+  static async checkoutSnacks(userId: string, items: Array<{ snackId: string; amount: number }>) {
+    return await prisma.$transaction(async (tx) => {
+      const results = [];
+
+      for (const item of items) {
+        const updatedRows = await tx.$queryRaw<
+          Array<{
+            id: string;
+            name: string;
+            category: SnackCategory;
+            quantity: number;
+            lowStockThreshold: number;
+            calories: number | null;
+            imageUrl: string | null;
+            images: string[];
+          }>
+        >`
+          UPDATE "Snack"
+          SET "quantity" = "quantity" - ${item.amount},
+              "updatedAt" = CURRENT_TIMESTAMP
+          WHERE "id" = ${item.snackId}
+            AND "archivedAt" IS NULL
+            AND "quantity" >= ${item.amount}
+          RETURNING "id", "name", "category", "quantity", "lowStockThreshold", "calories", "imageUrl", "images"
+        `;
+
+        if (!updatedRows || updatedRows.length === 0) {
+          const existing = await tx.snack.findFirst({
+            where: { id: item.snackId, archivedAt: null },
+            select: { name: true, quantity: true },
+          });
+
+          if (!existing) {
+            throw new ApiError(404, 'NOT_FOUND', 'Snack not found');
+          }
+
+          throw new ApiError(
+            409,
+            'INSUFFICIENT_STOCK',
+            `Someone beat you to ${existing.name}! Only ${existing.quantity} left in stock.`
+          );
+        }
+
+        const updatedSnack = updatedRows[0];
+
+        await tx.activity.create({
+          data: {
+            userId,
+            snackId: item.snackId,
+            action: ActivityAction.CONSUMED,
+            amount: item.amount,
+          },
+        });
+
+        const rawImages = Array.isArray(updatedSnack.images) ? updatedSnack.images : [];
+        const images = rawImages.length > 0 ? rawImages : (updatedSnack.imageUrl ? [updatedSnack.imageUrl] : []);
+        const imageUrl = updatedSnack.imageUrl || (images.length > 0 ? images[0] : null);
+
+        results.push({
+          id: updatedSnack.id,
+          name: updatedSnack.name,
+          category: updatedSnack.category,
+          quantity: updatedSnack.quantity,
+          lowStockThreshold: updatedSnack.lowStockThreshold,
+          calories: updatedSnack.calories,
+          imageUrl,
+          images,
+          amountConsumed: item.amount,
+          status: getSnackStatus(updatedSnack.quantity, updatedSnack.lowStockThreshold),
+        });
+      }
+
+      return results;
     });
   }
 
@@ -329,6 +468,9 @@ export class SnackService {
    * If initial quantity > 0, records an initial RESTOCKED activity log.
    */
   static async createSnack(input: CreateSnackInput, adminUserId: string) {
+    const rawImages = input.images && input.images.length > 0 ? input.images : (input.imageUrl ? [input.imageUrl] : []);
+    const primaryImage = input.imageUrl || (rawImages.length > 0 ? rawImages[0] : null);
+
     const existing = await prisma.snack.findUnique({
       where: { name: input.name },
     });
@@ -345,6 +487,9 @@ export class SnackService {
             category: input.category,
             quantity: input.quantity,
             lowStockThreshold: input.lowStockThreshold,
+            calories: input.calories ?? null,
+            imageUrl: primaryImage,
+            images: rawImages,
             archivedAt: null,
           },
         });
@@ -366,6 +511,9 @@ export class SnackService {
           category: unarchived.category,
           quantity: unarchived.quantity,
           lowStockThreshold: unarchived.lowStockThreshold,
+          calories: unarchived.calories,
+          imageUrl: unarchived.imageUrl,
+          images: unarchived.images,
           status: getSnackStatus(unarchived.quantity, unarchived.lowStockThreshold),
           createdAt: unarchived.createdAt,
           updatedAt: unarchived.updatedAt,
@@ -380,6 +528,9 @@ export class SnackService {
           category: input.category,
           quantity: input.quantity,
           lowStockThreshold: input.lowStockThreshold,
+          calories: input.calories ?? null,
+          imageUrl: primaryImage,
+          images: rawImages,
         },
       });
 
@@ -400,6 +551,9 @@ export class SnackService {
         category: snack.category,
         quantity: snack.quantity,
         lowStockThreshold: snack.lowStockThreshold,
+        calories: snack.calories,
+        imageUrl: snack.imageUrl,
+        images: snack.images,
         status: getSnackStatus(snack.quantity, snack.lowStockThreshold),
         createdAt: snack.createdAt,
         updatedAt: snack.updatedAt,
@@ -408,7 +562,7 @@ export class SnackService {
   }
 
   /**
-   * Admin: Edit snack metadata (name, category, threshold).
+   * Admin: Edit snack metadata (name, category, threshold, calories, imageUrl, images).
    */
   static async updateSnack(id: string, input: UpdateSnackInput) {
     const existing = await prisma.snack.findFirst({
@@ -428,14 +582,24 @@ export class SnackService {
       }
     }
 
+    const newImages = input.images !== undefined ? input.images : (input.imageUrl ? [input.imageUrl] : undefined);
+    const newImageUrl = input.imageUrl !== undefined ? input.imageUrl : (input.images && input.images.length > 0 ? input.images[0] : undefined);
+
     const updated = await prisma.snack.update({
       where: { id },
       data: {
         ...(input.name && { name: input.name }),
         ...(input.category && { category: input.category }),
         ...(input.lowStockThreshold !== undefined && { lowStockThreshold: input.lowStockThreshold }),
+        ...(input.calories !== undefined && { calories: input.calories }),
+        ...(newImageUrl !== undefined && { imageUrl: newImageUrl }),
+        ...(newImages !== undefined && { images: newImages }),
       },
     });
+
+    const rawImages = Array.isArray(updated.images) ? updated.images : [];
+    const images = rawImages.length > 0 ? rawImages : (updated.imageUrl ? [updated.imageUrl] : []);
+    const imageUrl = updated.imageUrl || (images.length > 0 ? images[0] : null);
 
     return {
       id: updated.id,
@@ -443,6 +607,9 @@ export class SnackService {
       category: updated.category,
       quantity: updated.quantity,
       lowStockThreshold: updated.lowStockThreshold,
+      calories: updated.calories,
+      imageUrl,
+      images,
       status: getSnackStatus(updated.quantity, updated.lowStockThreshold),
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,

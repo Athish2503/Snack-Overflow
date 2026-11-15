@@ -36,6 +36,11 @@ export const inventoryMutationSchema = z.object({
 export type InventoryMutationInput = z.infer<typeof inventoryMutationSchema>;
 
 
+const imageItemSchema = z.string().trim().refine(
+  (val) => val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/') || val.startsWith('data:image/'),
+  { message: 'Image must be a valid URL, path, or data URI' }
+);
+
 export const createSnackSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(100, 'Name cannot exceed 100 characters'),
   category: z.nativeEnum(SnackCategory, { errorMap: () => ({ message: 'Valid category is required' }) }),
@@ -49,6 +54,24 @@ export const createSnackSchema = z.object({
     .min(0, 'Threshold cannot be negative')
     .optional()
     .default(5),
+  calories: z
+    .number()
+    .int('Calories must be an integer')
+    .min(0, 'Calories cannot be negative')
+    .optional()
+    .nullable(),
+  imageUrl: z
+    .string()
+    .trim()
+    .refine(
+      (val) => !val || val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/') || val.startsWith('data:image/'),
+      { message: 'Image URL must be a valid URL, path, or data URI' }
+    )
+    .or(z.literal(''))
+    .optional()
+    .nullable()
+    .transform((val) => (val === '' ? null : val)),
+  images: z.array(imageItemSchema).optional().default([]),
 });
 
 export type CreateSnackInput = z.infer<typeof createSnackSchema>;
@@ -57,6 +80,38 @@ export const updateSnackSchema = z.object({
   name: z.string().trim().min(1, 'Name cannot be empty').max(100, 'Name cannot exceed 100 characters').optional(),
   category: z.nativeEnum(SnackCategory).optional(),
   lowStockThreshold: z.number().int().min(0, 'Threshold cannot be negative').optional(),
+  calories: z
+    .number()
+    .int('Calories must be an integer')
+    .min(0, 'Calories cannot be negative')
+    .optional()
+    .nullable(),
+  imageUrl: z
+    .string()
+    .trim()
+    .refine(
+      (val) => !val || val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/') || val.startsWith('data:image/'),
+      { message: 'Image URL must be a valid URL, path, or data URI' }
+    )
+    .or(z.literal(''))
+    .optional()
+    .nullable()
+    .transform((val) => (val === '' ? null : val)),
+  images: z.array(imageItemSchema).optional(),
 });
 
 export type UpdateSnackInput = z.infer<typeof updateSnackSchema>;
+
+export const checkoutItemSchema = z.object({
+  snackId: z.string().uuid('Invalid snack ID'),
+  amount: z
+    .number({ required_error: 'Amount is required' })
+    .int('Amount must be an integer')
+    .positive('Amount must be a positive integer'),
+});
+
+export const checkoutSchema = z.object({
+  items: z.array(checkoutItemSchema).min(1, 'At least one item is required for checkout'),
+});
+
+export type CheckoutInput = z.infer<typeof checkoutSchema>;

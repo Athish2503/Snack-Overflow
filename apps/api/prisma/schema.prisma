@@ -44,6 +44,9 @@ model Snack {
   category          SnackCategory
   quantity          Int           @default(0)
   lowStockThreshold Int           @default(5)
+  calories          Int?
+  imageUrl          String?
+  images            String[]      @default([])
 
   votes             Vote[]
   activities        Activity[]

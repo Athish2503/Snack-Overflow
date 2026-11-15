@@ -109,3 +109,54 @@ Verified via automated integration test in `apps/api/tests/consumption.test.ts`:
   - Exactly **7** requests receive `409 Conflict` (`INSUFFICIENT_STOCK`).
   - Final database quantity is exactly **0** (never negative).
   - Exactly **3** `CONSUMED` activity records created in PostgreSQL.
+
+## Authentication & Role-Based Authorization (RBAC)
+
+- **Session Handling**: JWT access tokens stored in secure, `httpOnly`, `sameSite=lax` cookies.
+- **Roles**:
+  - `MEMBER`: Can browse inventory, consume snacks (1-5 units), cast/toggle weekly votes, and view summary metrics.
+  - `ADMIN`: Inherits all Member capabilities + Add snack, Edit details, Restock inventory, Archive snack, and access the paginated Audit Activity Log (`/activity`).
+- **Server-Side Enforcement**: All mutations authenticate through `authenticate` middleware and enforce permissions via `requireRole('ADMIN')`. The frontend navigation and controls adapt responsively based on the user's role for UX, but the API backend remains the strict source of truth for authorization.
+
+## API Endpoints Reference
+
+### Authentication
+- `POST /api/auth/login`: Authenticate with email and password, sets `token` httpOnly cookie.
+- `POST /api/auth/logout`: Clears session cookie.
+- `GET /api/auth/me`: Returns current authenticated user profile (`{ id, name, email, role }`).
+
+### Snacks & Inventory
+- `GET /api/snacks`: List active snacks with search, category, status, and sorting filters.
+- `GET /api/snacks/:id`: Retrieve single snack by ID with user vote status.
+- `GET /api/snacks/summary`: Dashboard metrics (`totalSnacks`, `lowStockCount`, `goneCount`, `snackOfTheWeek`).
+- `POST /api/snacks/:id/consume`: Consume 1–5 packets (atomic conditional SQL with 409 conflict handling).
+- `POST /api/snacks/:id/vote`: Cast or toggle weekly vote.
+- `POST /api/snacks`: (Admin only) Create a new snack item.
+- `PATCH /api/snacks/:id`: (Admin only) Update snack metadata (name, category, lowStockThreshold).
+- `POST /api/snacks/:id/restock`: (Admin only) Increase snack stock by an amount.
+- `DELETE /api/snacks/:id`: (Admin only) Soft-delete/archive a snack.
+
+### Audit Activity Log
+- `GET /api/activity`: (Admin only) Paginated audit history (`CONSUMED`, `RESTOCKED`) with user details, snack names, and timestamp.
+
+## Engineering Decisions, Trade-offs & 100x Scale
+
+### Key Decisions
+1. **Conditional SQL over Pessimistic Locking (`SELECT ... FOR UPDATE`)**:
+   Conditional `UPDATE ... WHERE quantity >= amount` avoids holding row locks during request processing, providing optimal throughput and zero risk of deadlocks while guaranteeing 100% stock consistency.
+2. **Soft Deletion (`archivedAt`)**:
+   Snacks are never hard-deleted from PostgreSQL to preserve relational integrity with historical `Activity` records and `Vote` logs.
+3. **URL State as Single Source of Truth**:
+   The `/snacks` list synchronizes search, category, status, sort, and pagination state into URL query parameters, enabling instant deep-linking, browser back/forward navigation, and eliminating multi-state desynchronization bugs.
+
+### What Breaks First at 100x Load (and Fixes):
+- **High-contention Row Hotspots**:
+  If hundreds of users attempt to consume the single most popular snack within milliseconds, row-level locks on PostgreSQL during the `UPDATE` can cause query queuing.
+  *Fix*: Introduce Redis-backed distributed token buckets or an in-memory reservations pipeline (e.g., Redis `DECRBY` with Lua scripts), draining asynchronous audit logs via a messaging broker into PostgreSQL.
+- **Snack of the Week Aggregation**:
+  Calculating weekly votes via `COUNT(Vote)` across hundreds of thousands of votes on every summary request can strain read replicas.
+  *Fix*: Maintain a pre-aggregated weekly leaderboard table or Redis Sorted Set (`ZINCRBY leaderboard:current_week 1 snack_id`), updated synchronously during voting.
+- **Database Connection Pool Exhaustion**:
+  Default connection pool sizes will saturate under thousands of concurrent server requests.
+  *Fix*: Deploy PgBouncer in transaction pooling mode in front of PostgreSQL, and enable CDN caching on public read endpoints (`GET /api/snacks/summary`, `stale-while-revalidate`).
+

@@ -1,10 +1,14 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import path from 'path';
+import fs from 'fs';
 import { config } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import snackRoutes from './modules/snacks/snack.routes.js';
+import activityRoutes from './modules/activity/activity.routes.js';
+import uploadRoutes from './modules/upload/upload.routes.js';
 import { authenticate } from './middleware/authenticate.js';
 import { requireAdmin } from './middleware/authorize.js';
 import { AuthRequest } from './types/express.js';
@@ -17,7 +21,14 @@ export const createApp = (): Express => {
     credentials: true,
   }));
   app.use(cookieParser(config.cookieSecret));
-  app.use(express.json());
+  app.use(express.json({ limit: '20mb' }));
+
+  // Static uploads directory
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use('/uploads', express.static(uploadsDir));
 
   // Health check endpoint
   app.get('/health', (_req: Request, res: Response) => {
@@ -36,6 +47,14 @@ export const createApp = (): Express => {
   // Snacks routes mounted under /api/snacks and /snacks
   app.use('/api/snacks', snackRoutes);
   app.use('/snacks', snackRoutes);
+
+  // Upload routes mounted under /api/upload and /upload
+  app.use('/api/upload', uploadRoutes);
+  app.use('/upload', uploadRoutes);
+
+  // Activity routes mounted under /api/activity and /activity (Admin only)
+  app.use('/api/activity', activityRoutes);
+  app.use('/activity', activityRoutes);
 
   // Test endpoints for RBAC verification
   app.get('/api/test/protected', authenticate, (req: AuthRequest, res: Response) => {

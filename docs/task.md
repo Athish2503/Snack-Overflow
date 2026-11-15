@@ -149,15 +149,15 @@ Use this file as the source of truth for implementation progress. Mark a checkbo
 
 **Priority:** P1
 
-- [ ] Create shared layout, navigation, and responsive page shell.
-- [ ] Create login page with validation and useful errors.
-- [ ] Restore session using `/auth/me`.
-- [ ] Implement logout.
-- [ ] Implement role-aware navigation and controls.
-- [ ] Add centralized API client with credentials configured correctly.
-- [ ] Configure TanStack Query.
-- [ ] Add reusable loading, empty, and error components.
-- [ ] Ensure frontend does not treat client role state as authorization.
+- [x] Create shared layout, navigation, and responsive page shell.
+- [x] Create login page with validation and useful errors.
+- [x] Restore session using `/auth/me`.
+- [x] Implement logout.
+- [x] Implement role-aware navigation and controls.
+- [x] Add centralized API client with credentials configured correctly.
+- [x] Configure TanStack Query.
+- [x] Add reusable loading, empty, and error components.
+- [x] Ensure frontend does not treat client role state as authorization.
 
 **Exit criteria:** Admin and member can log in and see the correct navigation/actions.
 
@@ -165,20 +165,20 @@ Use this file as the source of truth for implementation progress. Mark a checkbo
 
 **Priority:** P1
 
-- [ ] Build dashboard summary cards.
-- [ ] Build Snack of the Week section.
-- [ ] Build low-stock / gone section.
-- [ ] Build snack list and snack cards.
-- [ ] Connect category filter to API.
-- [ ] Connect status filter to API.
-- [ ] Connect search to API.
-- [ ] Connect pagination to API.
-- [ ] Make running-low and gone states visually obvious.
-- [ ] Add consume action with amount input or a sensible default.
-- [ ] Add vote/unvote action.
-- [ ] Invalidate/refetch relevant queries after mutations.
-- [ ] Show clear 409 feedback, e.g. “Someone beat you to the last packet!”
-- [ ] Test responsive layout on phone-sized viewport.
+- [x] Build dashboard summary cards.
+- [x] Build Snack of the Week section.
+- [x] Build low-stock / gone section.
+- [x] Build snack list and snack cards.
+- [x] Connect category filter to API.
+- [x] Connect status filter to API.
+- [x] Connect search to API.
+- [x] Connect pagination to API.
+- [x] Make running-low and gone states visually obvious.
+- [x] Add consume action with amount input or a sensible default.
+- [x] Add vote/unvote action.
+- [x] Invalidate/refetch relevant queries after mutations.
+- [x] Show clear 409 feedback, e.g. “Someone beat you to the last packet!”
+- [x] Test responsive layout on phone-sized viewport.
 
 **Exit criteria:** Member can use the complete read, consume, and vote flow.
 
@@ -186,13 +186,13 @@ Use this file as the source of truth for implementation progress. Mark a checkbo
 
 **Priority:** P1
 
-- [ ] Add snack creation form.
-- [ ] Add edit form.
-- [ ] Add restock action.
-- [ ] Add delete/archive confirmation.
-- [ ] Hide admin-only controls from members.
-- [ ] Ensure backend still rejects member direct API calls.
-- [ ] Show validation and server errors clearly.
+- [x] Add snack creation form.
+- [x] Add edit form.
+- [x] Add restock action.
+- [x] Add delete/archive confirmation.
+- [x] Hide admin-only controls from members.
+- [x] Ensure backend still rejects member direct API calls.
+- [x] Show validation and server errors clearly.
 
 **Exit criteria:** Admin can manage inventory from the UI; member cannot.
 
@@ -200,19 +200,19 @@ Use this file as the source of truth for implementation progress. Mark a checkbo
 
 **Priority:** P0/P1
 
-- [ ] Run all API tests against PostgreSQL.
-- [ ] Run concurrency test more than once.
-- [ ] Verify activity and stock changes remain transactionally consistent.
-- [ ] Verify duplicate votes are impossible.
-- [ ] Verify every protected route has authorization coverage.
-- [ ] Verify all request inputs are validated.
-- [ ] Verify error responses follow the shared contract.
-- [ ] Verify no password hash or secret is returned by API.
-- [ ] Verify no secret or `.env` is committed.
-- [ ] Run lint and type-check.
-- [ ] Run frontend and backend production builds.
-- [ ] Fix console errors and obvious accessibility issues.
-- [ ] Test mobile layout and empty/error/loading states.
+- [x] Run all API tests against PostgreSQL.
+- [x] Run concurrency test more than once.
+- [x] Verify activity and stock changes remain transactionally consistent.
+- [x] Verify duplicate votes are impossible.
+- [x] Verify every protected route has authorization coverage.
+- [x] Verify all request inputs are validated.
+- [x] Verify error responses follow the shared contract.
+- [x] Verify no password hash or secret is returned by API.
+- [x] Verify no secret or `.env` is committed.
+- [x] Run lint and type-check.
+- [x] Run frontend and backend production builds.
+- [x] Fix console errors and obvious accessibility issues.
+- [x] Test mobile layout and empty/error/loading states.
 
 **Exit criteria:** All mandatory acceptance criteria in `goals.md` pass.
 
@@ -220,13 +220,13 @@ Use this file as the source of truth for implementation progress. Mark a checkbo
 
 **Priority:** P2
 
-- [ ] Write complete README setup instructions.
-- [ ] Document demo credentials.
-- [ ] Document endpoints and example requests.
-- [ ] Document schema and key constraints.
-- [ ] Explain atomic consumption and transaction boundaries.
-- [ ] Explain authentication and role authorization.
-- [ ] Add design note: decisions, trade-offs, and what breaks first at 100x.
+- [x] Write complete README setup instructions.
+- [x] Document demo credentials.
+- [x] Document endpoints and example requests.
+- [x] Document schema and key constraints.
+- [x] Explain atomic consumption and transaction boundaries.
+- [x] Explain authentication and role authorization.
+- [x] Add design note: decisions, trade-offs, and what breaks first at 100x.
 - [ ] Clean up meaningful Git commit history.
 - [ ] Push to a public GitHub repository.
 - [ ] Record a 3–5 minute demo.
@@ -242,7 +242,7 @@ Use this file as the source of truth for implementation progress. Mark a checkbo
 
 Choose only what can be completed and tested safely:
 - [ ] Docker Compose for database, API, and frontend.
-- [ ] Admin-only paginated activity page.
+- [x] Admin-only paginated activity page.
 - [ ] Optimistic UI with rollback on failure.
 - [ ] Server-side sorting by name, quantity, or votes.
 - [ ] Idempotency-Key support for consume retries.

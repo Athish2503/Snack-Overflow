@@ -8,6 +8,7 @@ import {
   inventoryMutationSchema,
   createSnackSchema,
   updateSnackSchema,
+  checkoutSchema,
 } from './snack.schema.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 
@@ -15,6 +16,14 @@ const router = Router();
 
 // Summary
 router.get('/summary', authenticate, asyncHandler(SnackController.getSummary));
+
+// Multi-item cart checkout
+router.post(
+  '/checkout',
+  authenticate,
+  validate(checkoutSchema),
+  asyncHandler(SnackController.checkout)
+);
 
 // List and Create
 router.get('/', authenticate, validateQuery(snackQuerySchema), asyncHandler(SnackController.getSnacks));
