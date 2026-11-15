@@ -8,7 +8,7 @@ import React, {
   useState,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, ApiError } from '@/lib/api';
+import { api, ApiError, setAuthToken } from '@/lib/api';
 import type { User } from '@/lib/types';
 
 interface AuthContextValue {
@@ -25,6 +25,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 interface AuthResponse {
   user?: User;
   data?: { user: User };
+  token?: string;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -40,7 +41,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const u = res.user ?? res.data?.user ?? null;
         setUser(u);
       })
-      .catch(() => setUser(null))
+      .catch(() => {
+        setAuthToken(null);
+        setUser(null);
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -52,6 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const u = res.user ?? res.data?.user;
     if (!u) {
       throw new Error('User not returned from server');
+    }
+    if (res.token) {
+      setAuthToken(res.token);
     }
     setUser(u);
   }, []);
@@ -66,6 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!u) {
       throw new Error('User not returned from server');
     }
+    if (res.token) {
+      setAuthToken(res.token);
+    }
     setUser(u);
   }, []);
 
@@ -75,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore errors, still clear local state
     }
+    setAuthToken(null);
     setUser(null);
     router.push('/login');
   }, [router]);

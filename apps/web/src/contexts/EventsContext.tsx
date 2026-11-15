@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthContext';
+import { getAuthToken } from '@/lib/api';
 import { AdminDashboardResponse, SnackListResponse } from '@/lib/types';
 
 interface EventsContextValue {
@@ -35,8 +36,9 @@ export function EventsProvider({ children }: { children: React.ReactNode }) {
         eventSourceRef.current.close();
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
-      const sseUrl = `${apiUrl}/events`;
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api').replace(/\/+$/, '');
+      const token = getAuthToken();
+      const sseUrl = `${apiUrl}/events${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 
       const es = new EventSource(sseUrl, { withCredentials: true });
       eventSourceRef.current = es;

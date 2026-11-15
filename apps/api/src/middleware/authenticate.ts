@@ -13,7 +13,8 @@ export const authenticate = async (req: AuthRequest, _res: Response, next: NextF
   try {
     const authHeader = req.headers.authorization;
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    const token = req.cookies?.access_token || bearerToken;
+    const queryToken = typeof req.query?.token === 'string' ? req.query.token : null;
+    const token = req.cookies?.access_token || bearerToken || queryToken;
 
     if (!token) {
       throw new ApiError(401, 'UNAUTHORIZED', 'Authentication required');
@@ -51,7 +52,8 @@ export const optionalAuthenticate = async (req: AuthRequest, _res: Response, nex
   try {
     const authHeader = req.headers.authorization;
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    const token = req.cookies?.access_token || bearerToken;
+    const queryToken = typeof req.query?.token === 'string' ? req.query.token : null;
+    const token = req.cookies?.access_token || bearerToken || queryToken;
     if (!token) {
       return next();
     }

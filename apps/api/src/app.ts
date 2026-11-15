@@ -20,8 +20,25 @@ export const createApp = (): Express => {
 
   app.set('trust proxy', 1);
 
+  const allowedOrigins = [
+    config.clientUrl.replace(/\/+$/, ''),
+    'http://localhost:3000',
+    'http://localhost:3001',
+  ];
+
   app.use(cors({
-    origin: config.clientUrl,
+    origin: (requestOrigin, callback) => {
+      if (!requestOrigin) return callback(null, true);
+      const normalized = requestOrigin.replace(/\/+$/, '');
+      if (
+        allowedOrigins.includes(normalized) ||
+        normalized.endsWith('.onrender.com') ||
+        config.nodeEnv !== 'production'
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   }));
   app.use(cookieParser(config.cookieSecret));
