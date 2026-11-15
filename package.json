@@ -12,7 +12,11 @@
     "build": "npm run --workspaces --if-present build",
     "test": "npm run --workspaces --if-present test",
     "lint": "npm run --workspaces --if-present lint",
-    "type-check": "npm run --workspaces --if-present type-check"
+    "type-check": "npm run --workspaces --if-present type-check",
+    "db:migrate": "npm --workspace=apps/api run prisma:migrate",
+    "db:seed": "npm --workspace=apps/api run prisma:seed",
+    "prisma:migrate": "npm --workspace=apps/api run prisma:migrate",
+    "prisma:seed": "npm --workspace=apps/api run prisma:seed"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

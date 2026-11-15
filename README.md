@@ -74,12 +74,13 @@ NODE_ENV=development
 Run Prisma migrations to set up the schema, composite indexes, and PostgreSQL check constraints, then seed initial snack and user records:
 
 ```bash
-# Run migrations
-npm --workspace=apps/api run prisma:migrate
+# Run migrations (directly from root)
+npm run db:migrate
 
-# Seed demo users and snack inventory
-npm --workspace=apps/api run prisma:seed
+# Seed demo users (1 admin, 1 member) and sample snack inventory
+npm run db:seed
 ```
+*(Alternatively: `npm --workspace=apps/api run prisma:migrate` and `npm --workspace=apps/api run prisma:seed`)*
 
 ### 4. Run Development Servers
 

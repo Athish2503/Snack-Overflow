@@ -158,7 +158,10 @@ export default function LoginPage() {
     if (typeof window !== 'undefined') {
       const q = new URLSearchParams(window.location.search);
       if (q.get('mode') === 'register' || q.get('signup') === 'true') {
-        setMode('register');
+        const timer = setTimeout(() => {
+          setMode('register');
+        }, 0);
+        return () => clearTimeout(timer);
       }
     }
   }, []);
