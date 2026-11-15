@@ -5,7 +5,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install && npm run build:api
+    buildCommand: npm install --include=dev && npm run build:api
     preDeployCommand: npm run db:migrate:deploy
     startCommand: npm run start:api
     envVars:
@@ -30,7 +30,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install && npm run build:web
+    buildCommand: npm install --include=dev && npm run build:web
     startCommand: npm run start:web
     envVars:
       - key: NODE_ENV
