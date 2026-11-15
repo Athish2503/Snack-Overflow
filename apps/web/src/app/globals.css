@@ -371,6 +371,14 @@ h1, h2, h3, h4, h5, h6 {
   position: sticky;
   top: 0;
   z-index: 30;
+  overflow: visible;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: visible;
 }
 
 .topbar-title {
@@ -466,6 +474,7 @@ h1, h2, h3, h4, h5, h6 {
   position: sticky;
   top: 0;
   z-index: 30;
+  overflow: visible;
 }
 
 /* ─────────────────────────────────────────────
@@ -841,6 +850,60 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 999px;
 }
 
+.gone-stripes-banner {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(224, 49, 49, 0.12),
+    rgba(224, 49, 49, 0.12) 14px,
+    rgba(255, 255, 255, 0.28) 14px,
+    rgba(255, 255, 255, 0.28) 28px
+  );
+  backdrop-filter: blur(1.5px);
+}
+
+.gone-stripes-tape {
+  transform: rotate(-7deg);
+  background: var(--gone);
+  color: #ffffff;
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  padding: 4px 18px;
+  font-family: var(--font-bricolage), 'Bricolage Grotesque', sans-serif;
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: stampIn 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.gone-stripes-quip {
+  transform: rotate(3deg);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: var(--font-bricolage), sans-serif;
+  white-space: nowrap;
+  animation: stampIn 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 .gone-stamp {
   position: absolute;
   top: 50%;
@@ -901,7 +964,7 @@ h1, h2, h3, h4, h5, h6 {
   position: fixed;
   z-index: 9999;
   pointer-events: none;
-  animation: flyToCart 560ms cubic-bezier(0.25, 0.9, 0.35, 1) forwards;
+  animation: flyToCart 600ms cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
   will-change: transform, opacity;
 }
 
@@ -910,30 +973,30 @@ h1, h2, h3, h4, h5, h6 {
     transform: translate3d(var(--start-x), var(--start-y), 0) translate(-50%, -50%) scale(1) rotate(0deg);
     opacity: 1;
   }
-  45% {
+  40% {
     transform: translate3d(
       calc(var(--start-x) * 0.45 + var(--target-x) * 0.55),
       calc(min(var(--start-y), var(--target-y)) - 55px),
       0
-    ) translate(-50%, -50%) scale(0.72) rotate(-10deg);
+    ) translate(-50%, -50%) scale(0.65) rotate(-6deg);
     opacity: 0.95;
   }
   100% {
-    transform: translate3d(var(--target-x), var(--target-y), 0) translate(-50%, -50%) scale(0.2) rotate(14deg);
-    opacity: 0.2;
+    transform: translate3d(var(--target-x), var(--target-y), 0) translate(-50%, -50%) scale(0.3) rotate(8deg);
+    opacity: 0.1;
   }
 }
 
 .cart-bounce {
-  animation: cartPop 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: cartCatchBounce 450ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes cartPop {
+@keyframes cartCatchBounce {
   0% { transform: scale(1); }
-  35% { transform: scale(1.32) rotate(-6deg); }
-  65% { transform: scale(0.92) rotate(3deg); }
-  85% { transform: scale(1.08) rotate(-1deg); }
-  100% { transform: scale(1) rotate(0deg); }
+  30% { transform: scale(1.18) translateY(-2px); }
+  55% { transform: scale(0.95) translateY(1px); }
+  75% { transform: scale(1.05) translateY(-1px); }
+  100% { transform: scale(1) translateY(0); }
 }
 
 .cart-badge-bounce {
@@ -941,9 +1004,81 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes badgePop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.45); }
-  100% { transform: scale(1); }
+  0% { transform: scale(0.5); opacity: 0.6; }
+  50% { transform: scale(1.35); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Rolling digit animation for cart badge */
+.badge-digit-roll {
+  animation: digitRoll 300ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@keyframes digitRoll {
+  0% {
+    transform: translateY(-80%);
+    opacity: 0.2;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Snack Card Container Queries & Hover Baseline Enforcement */
+.snack-card-container {
+  container-type: inline-size;
+  container-name: snackcard;
+  width: 100%;
+}
+
+.snack-card {
+  align-self: stretch;
+  height: 100%;
+}
+
+@media (hover: hover) {
+  .snack-card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-hover);
+  }
+}
+
+/* Ensure no stuck transform on unhover/focus loss */
+.snack-card:not(:hover):not(:active) {
+  transform: none;
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .sticker,
+  .snack-card,
+  .nav-item,
+  .rail-item,
+  .user-menu-trigger,
+  .user-dropdown-item {
+    transition: none !important;
+    transform: none !important;
+  }
+
+  .flying-cart-item {
+    display: none !important;
+  }
+
+  .cart-bounce {
+    animation: pulseBadgeOnly 400ms ease-in-out !important;
+  }
+
+  .cart-badge-bounce,
+  .badge-digit-roll {
+    animation: pulseBadgeOnly 400ms ease-in-out !important;
+  }
+
+  @keyframes pulseBadgeOnly {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 1; }
+  }
 }
 
 

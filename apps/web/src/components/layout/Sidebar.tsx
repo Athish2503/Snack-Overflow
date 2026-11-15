@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Cookie, TrendingUp, Package, ShoppingBag } from 'lucide-react';
+import { Home, Cookie, TrendingUp, Package, ShoppingBag, Heart } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
@@ -44,30 +44,26 @@ function RailItem({ href, icon, label }: NavItemDef) {
 }
 
 function SidebarBagButton() {
-  const { openCart, totalItems, isBouncing } = useCart();
+  const { openCart, totalItems } = useCart();
   return (
     <button
       type="button"
       onClick={openCart}
       aria-label={`Open pantry bag (${totalItems} items)`}
-      className={`nav-item focus-ring cursor-pointer justify-between w-full text-left ${
-        isBouncing ? 'bg-[var(--primary-soft)]' : ''
-      }`}
+      className="nav-item focus-ring cursor-pointer justify-between w-full text-left"
       style={{ background: 'none', border: 'none', font: 'inherit' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ width: 20, height: 20, display: 'flex', alignItems: 'center' }}>
-          <ShoppingBag size={20} className={isBouncing ? 'cart-bounce text-[var(--primary)]' : ''} />
+          <ShoppingBag size={20} />
         </span>
         <span>Pantry Bag</span>
       </div>
       {totalItems > 0 && (
         <span
-          className={`min-w-[20px] h-[20px] px-1.5 rounded-full bg-[var(--primary)] text-white text-[11px] font-black font-heading flex items-center justify-center border border-[var(--ink)] ${
-            isBouncing ? 'cart-badge-bounce' : ''
-          }`}
+          className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-[var(--primary)] text-[var(--ink)] text-[11px] font-black font-mono tabular-nums flex items-center justify-center border border-[var(--ink)]"
         >
-          {totalItems}
+          {totalItems > 9 ? '9+' : totalItems}
         </span>
       )}
     </button>
@@ -75,7 +71,7 @@ function SidebarBagButton() {
 }
 
 function RailBagButton() {
-  const { openCart, totalItems, isBouncing } = useCart();
+  const { openCart, totalItems } = useCart();
   return (
     <button
       type="button"
@@ -86,15 +82,13 @@ function RailBagButton() {
       style={{ background: 'none', border: 'none' }}
     >
       <span style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <ShoppingBag size={20} className={isBouncing ? 'cart-bounce' : ''} />
+        <ShoppingBag size={20} />
       </span>
       {totalItems > 0 && (
         <span
-          className={`absolute top-1.5 right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[var(--primary)] text-white text-[9px] font-black flex items-center justify-center border border-[var(--ink)] ${
-            isBouncing ? 'cart-badge-bounce' : ''
-          }`}
+          className="absolute top-1.5 right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[var(--primary)] text-[var(--ink)] text-[9px] font-black font-mono tabular-nums flex items-center justify-center border border-[var(--ink)]"
         >
-          {totalItems}
+          {totalItems > 9 ? '9+' : totalItems}
         </span>
       )}
       <span className="rail-tooltip">Pantry Bag</span>
@@ -108,6 +102,7 @@ export function Sidebar() {
   const navItems: NavItemDef[] = [
     { href: '/dashboard', icon: <Home size={20} />, label: 'Home' },
     { href: '/snacks', icon: <Cookie size={20} />, label: 'Snacks' },
+    { href: '/favorites', icon: <Heart size={20} />, label: 'Favorites' },
     ...(isAdmin
       ? [{ href: '/activity', icon: <TrendingUp size={20} />, label: 'Activity' }]
       : []),

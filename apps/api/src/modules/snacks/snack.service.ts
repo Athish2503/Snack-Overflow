@@ -22,7 +22,7 @@ export interface FormattedSnack {
 
 export class SnackService {
   static async getSnacks(query: SnackQueryInput, currentUserId?: string) {
-    const { page, limit, search, category, status, sortBy, sortOrder } = query;
+    const { page, limit, search, category, status, favoritesOnly, sortBy, sortOrder } = query;
     const offset = (page - 1) * limit;
 
     const whereConditions: Prisma.Sql[] = [Prisma.sql`s."archivedAt" IS NULL`];
@@ -44,6 +44,10 @@ export class SnackService {
       } else if (status === 'stocked') {
         whereConditions.push(Prisma.sql`s."quantity" > s."lowStockThreshold"`);
       }
+    }
+
+    if (favoritesOnly && currentUserId) {
+      whereConditions.push(Prisma.sql`EXISTS (SELECT 1 FROM "Vote" fav WHERE fav."snackId" = s."id" AND fav."userId" = ${currentUserId})`);
     }
 
     const whereClause = Prisma.sql`WHERE ${Prisma.join(whereConditions, ' AND ')}`;

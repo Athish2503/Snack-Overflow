@@ -79,7 +79,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
 
       {/* Optional Top Left Overlay Badge (Category badge) */}
       {overlayBadge && (
-        <div className="absolute top-2.5 left-2.5 z-10 pointer-events-none">
+        <div className="absolute top-2.5 left-2.5 right-14 z-10 pointer-events-none overflow-hidden">
           {overlayBadge}
         </div>
       )}

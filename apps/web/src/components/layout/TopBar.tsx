@@ -9,16 +9,33 @@ import { useCart } from '@/contexts/CartContext';
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Home',
   '/snacks': 'Snacks',
+  '/favorites': 'Favorites',
   '/activity': 'Activity',
 };
 
 export function CartTrigger() {
   const { totalItems, totalCalories, openCart, registerCartTarget, isBouncing } = useCart();
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const [prevCount, setPrevCount] = useState(totalItems);
+  const [isDigitRolling, setIsDigitRolling] = useState(false);
 
   useEffect(() => {
     registerCartTarget(buttonRef.current);
   }, [registerCartTarget]);
+
+  if (totalItems !== prevCount) {
+    setPrevCount(totalItems);
+    setIsDigitRolling(true);
+  }
+
+  useEffect(() => {
+    if (isDigitRolling) {
+      const timer = setTimeout(() => setIsDigitRolling(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isDigitRolling]);
+
+  const displayCount = totalItems > 9 ? '9+' : totalItems;
 
   return (
     <button
@@ -34,11 +51,16 @@ export function CartTrigger() {
         <ShoppingBag size={18} strokeWidth={2.4} className="text-[var(--ink)]" />
         {totalItems > 0 && (
           <span
-            className={`absolute -top-2.5 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--primary)] text-white text-[10px] font-black font-heading flex items-center justify-center border border-[var(--ink)] shadow-[1px_1px_0_var(--ink)] ${
+            className={`absolute -top-3 -right-3.5 min-w-[20px] h-[20px] px-1 rounded-full bg-[var(--primary)] text-[var(--ink)] text-[10px] font-black font-mono tabular-nums flex items-center justify-center border-2 border-[var(--ink)] shadow-[1px_1px_0_var(--ink)] pointer-events-none select-none z-10 ${
               isBouncing ? 'cart-badge-bounce' : ''
             }`}
           >
-            {totalItems > 99 ? '99+' : totalItems}
+            <span
+              key={displayCount}
+              className={`inline-block font-mono tabular-nums ${isDigitRolling ? 'badge-digit-roll' : ''}`}
+            >
+              {displayCount}
+            </span>
           </span>
         )}
       </div>
@@ -46,10 +68,14 @@ export function CartTrigger() {
         Bag
       </span>
       {totalCalories > 0 && (
-        <span className="hidden lg:inline text-[11px] font-extrabold text-[var(--primary)]">
+        <span className="hidden lg:inline text-[11px] font-extrabold text-[var(--primary)] font-mono tabular-nums">
           {totalCalories} kcal
         </span>
       )}
+      {/* Aria-live polite region for screen readers */}
+      <span className="sr-only" aria-live="polite">
+        {totalItems} item{totalItems === 1 ? '' : 's'} in bag
+      </span>
     </button>
   );
 }

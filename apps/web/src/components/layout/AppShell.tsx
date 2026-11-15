@@ -66,12 +66,12 @@ export function AppShell({ children }: AppShellProps) {
         }}
       >
         {/* Mobile top bar */}
-        <div id="mobile-topbar-wrapper">
+        <div id="mobile-topbar-wrapper" className="sticky top-0 z-30">
           <MobileTopBar />
         </div>
 
         {/* Desktop top bar */}
-        <div id="desktop-topbar-wrapper" style={{ display: 'none' }}>
+        <div id="desktop-topbar-wrapper" className="sticky top-0 z-30" style={{ display: 'none' }}>
           <TopBar />
         </div>
 

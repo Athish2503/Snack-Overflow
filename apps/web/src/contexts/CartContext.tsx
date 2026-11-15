@@ -1,11 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { Snack, CartItem } from '../lib/types';
+import { Snack, CartItem, SnackCategory } from '../lib/types';
 
 export interface FlyingItem {
   id: string;
   imageUrl?: string | null;
+  category?: SnackCategory;
   name: string;
   startX: number;
   startY: number;
@@ -109,29 +110,40 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Trigger flying animation if sourceRect and cart target exist
       if (sourceRect && cartTargetRef.current) {
-        const targetRect = cartTargetRef.current.getBoundingClientRect();
-        const flyingId = `${snack.id}-${Date.now()}-${Math.random()}`;
-        const primaryImg = (snack.images && snack.images.length > 0) ? snack.images[0] : snack.imageUrl;
+        // Reduced motion check
+        const prefersReducedMotion =
+          typeof window !== 'undefined' &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        const newFlyer: FlyingItem = {
-          id: flyingId,
-          imageUrl: primaryImg,
-          name: snack.name,
-          startX: sourceRect.left + sourceRect.width / 2,
-          startY: sourceRect.top + sourceRect.height / 2,
-          startWidth: Math.min(sourceRect.width, 96),
-          startHeight: Math.min(sourceRect.height, 96),
-          targetX: targetRect.left + targetRect.width / 2,
-          targetY: targetRect.top + targetRect.height / 2,
-        };
-
-        setFlyingItems((prev) => [...prev, newFlyer]);
-
-        // Remove after animation duration & bounce cart
-        setTimeout(() => {
-          setFlyingItems((prev) => prev.filter((f) => f.id !== flyingId));
+        if (prefersReducedMotion) {
           triggerBounce();
-        }, 580);
+        } else {
+          // Measure targetRect at click time using viewport coordinates
+          const targetRect = cartTargetRef.current.getBoundingClientRect();
+          const flyingId = `${snack.id}-${Date.now()}-${Math.random()}`;
+          const primaryImg = (snack.images && snack.images.length > 0) ? snack.images[0] : snack.imageUrl;
+
+          const newFlyer: FlyingItem = {
+            id: flyingId,
+            imageUrl: primaryImg,
+            category: snack.category,
+            name: snack.name,
+            startX: sourceRect.left + sourceRect.width / 2,
+            startY: sourceRect.top + sourceRect.height / 2,
+            startWidth: 56,
+            startHeight: 56,
+            targetX: targetRect.left + targetRect.width / 2,
+            targetY: targetRect.top + targetRect.height / 2,
+          };
+
+          setFlyingItems((prev) => [...prev, newFlyer]);
+
+          // Remove after animation duration (~600ms) & trigger bounce on bag
+          setTimeout(() => {
+            setFlyingItems((prev) => prev.filter((f) => f.id !== flyingId));
+            triggerBounce();
+          }, 600);
+        }
       } else {
         triggerBounce();
       }

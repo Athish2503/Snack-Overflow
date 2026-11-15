@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { CategoryIcon } from '../../lib/snackHelpers';
 import { toast } from 'sonner';
+import { fireSuperConfetti, FUNNY_CHECKOUT_QUIPS, getRandomQuip } from '@/lib/confetti';
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -103,7 +104,13 @@ export const CartDrawer: React.FC = () => {
       setCheckoutSuccess(receipt);
       clearCart();
 
-      toast.success(res.message || 'Checkout complete! Snacks consumed.');
+      // Launch celebratory confetti & funny toast
+      fireSuperConfetti();
+      const funnyQuip = getRandomQuip(FUNNY_CHECKOUT_QUIPS);
+      toast.success(res.message || 'Haul secured! Snacks packed & consumed.', {
+        description: funnyQuip,
+        duration: 4500,
+      });
     } catch (err: unknown) {
       const apiErr = err as { code?: string; message?: string };
       const errMsg = apiErr.message || 'Failed to checkout. Please check available stock.';
@@ -382,7 +389,7 @@ export const CartDrawer: React.FC = () => {
               ) : (
                 <>
                   <CheckCircle2 size={18} strokeWidth={2.5} />
-                  <span>Checkout Bag ({totalItems})</span>
+                  <span>Grab them all ({totalItems})</span>
                 </>
               )}
             </button>

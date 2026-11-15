@@ -15,6 +15,7 @@ import { ImageCarousel } from '@/components/ui/ImageCarousel';
 import { RestockModal } from '@/components/admin/RestockModal';
 import { EditSnackModal } from '@/components/admin/EditSnackModal';
 import { ArchiveConfirmDialog } from '@/components/admin/ArchiveConfirmDialog';
+import { fireConfetti, FUNNY_CONSUME_QUIPS, getRandomQuip } from '@/lib/confetti';
 
 interface SnackDetailDrawerProps {
   snack: Snack | null;
@@ -106,13 +107,25 @@ export function SnackDetailDrawer({
     }
   }
 
-  async function handleConsume() {
+  async function handleConsume(e?: React.MouseEvent) {
     if (!snack || isConsuming || isGone) return;
+
+    if (e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      fireConfetti({ x: rect.left + rect.width / 2, y: rect.top });
+    } else {
+      fireConfetti();
+    }
+
     setIsConsuming(true);
 
     try {
       await api.post(`/snacks/${snack.id}/consume`, { amount });
-      toast.success(`You consumed ${amount} packet${amount > 1 ? 's' : ''} of ${snack.name}!`);
+      const funnyQuip = getRandomQuip(FUNNY_CONSUME_QUIPS);
+      toast.success(`You consumed ${amount} packet${amount > 1 ? 's' : ''} of ${snack.name}!`, {
+        description: funnyQuip,
+        duration: 3500,
+      });
       setAmount(1);
       queryClient.invalidateQueries({ queryKey: ['snacks'] });
       queryClient.invalidateQueries({ queryKey: ['snack-summary'] });
@@ -478,7 +491,7 @@ export function SnackDetailDrawer({
               {/* Consume Button */}
               <button
                 type="button"
-                onClick={handleConsume}
+                onClick={(e) => handleConsume(e)}
                 disabled={isConsuming || isGone}
                 className="sticker focus-ring"
                 style={{

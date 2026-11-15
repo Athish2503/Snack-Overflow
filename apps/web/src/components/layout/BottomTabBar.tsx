@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Cookie, TrendingUp, ShoppingBag } from 'lucide-react';
+import { Home, Cookie, TrendingUp, ShoppingBag, Heart } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
@@ -60,6 +60,7 @@ export function BottomTabBar() {
     <nav className="bottom-tab-bar" aria-label="Main navigation">
       <TabItem href="/dashboard" icon={<Home />} label="Home" />
       <TabItem href="/snacks" icon={<Cookie />} label="Snacks" />
+      <TabItem href="/favorites" icon={<Heart />} label="Liked" />
       <CartTabItem />
       {isAdmin && (
         <TabItem href="/activity" icon={<TrendingUp />} label="Activity" />
