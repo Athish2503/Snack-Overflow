@@ -6,6 +6,7 @@
     "apps/*"
   ],
   "scripts": {
+    "postinstall": "npm --workspace=apps/api run prisma:generate",
     "dev:api": "npm --workspace=apps/api run dev",
     "dev:web": "npm --workspace=apps/web run dev",
     "dev": "npm --workspace=apps/api run dev",
