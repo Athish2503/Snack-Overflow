@@ -80,6 +80,12 @@ export function QuickActionsTile({
               text-decoration: none;
               transition: transform 120ms ease-out, box-shadow 120ms ease-out, background 120ms ease-out;
               min-height: 44px;
+              min-width: 0;
+            }
+            .quick-action-btn span {
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
             }
             .quick-action-btn:hover {
               transform: translate(-1px, -1px);

@@ -797,6 +797,7 @@ export function SnackDetailDrawer({
             border-left: none !important;
             border-top: var(--border) !important;
             border-radius: 24px 24px 0 0 !important;
+            padding: 20px 16px calc(36px + env(safe-area-inset-bottom)) !important;
             animation: sheetSlideUp 240ms cubic-bezier(0.22, 1, 0.36, 1) !important;
           }
 

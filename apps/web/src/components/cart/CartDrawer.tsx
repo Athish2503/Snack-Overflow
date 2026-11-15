@@ -140,7 +140,7 @@ export const CartDrawer: React.FC = () => {
 
       {/* Drawer Container */}
       <aside
-        className="relative z-10 w-full max-w-md bg-[var(--surface)] border-l-2 border-[var(--ink)] shadow-[-6px_0_0_var(--ink)] flex flex-col h-full max-h-screen text-[var(--ink)] transition-transform duration-300 animate-in slide-in-from-right"
+        className="relative z-10 w-full max-w-md bg-[var(--surface)] border-l-2 border-[var(--ink)] shadow-[-6px_0_0_var(--ink)] flex flex-col h-full max-h-[100dvh] text-[var(--ink)] transition-transform duration-300 animate-in slide-in-from-right"
         role="dialog"
         aria-modal="true"
         aria-label="Snack Cart"
@@ -354,7 +354,7 @@ export const CartDrawer: React.FC = () => {
 
         {/* Footer / Summary & Checkout Button */}
         {cart.length > 0 && !checkoutSuccess && (
-          <div className="p-4 sm:p-5 border-t-2 border-[var(--ink)] bg-[var(--surface-2)] space-y-3">
+          <div className="p-4 sm:p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] border-t-2 border-[var(--ink)] bg-[var(--surface-2)] space-y-3">
             <div className="space-y-1.5 text-xs font-bold text-[var(--ink-muted)]">
               <div className="flex justify-between items-center">
                 <span>Total Items:</span>

@@ -79,6 +79,7 @@ export function Dialog({
       >
         {/* Header */}
         <div
+          className="dialog-header"
           style={{
             padding: '20px 24px 16px',
             borderBottom: 'var(--border)',
@@ -141,6 +142,7 @@ export function Dialog({
 
         {/* Content */}
         <div
+          className="dialog-body"
           style={{
             padding: '24px',
             overflowY: 'auto',
@@ -159,6 +161,15 @@ export function Dialog({
           to {
             opacity: 1;
             transform: scale(1) translateY(0);
+          }
+        }
+
+        @media (max-width: 640px) {
+          .dialog-header {
+            padding: 16px 18px 12px !important;
+          }
+          .dialog-body {
+            padding: 16px 18px !important;
           }
         }
       `}</style>

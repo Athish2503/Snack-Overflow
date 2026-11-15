@@ -80,7 +80,7 @@ export function CartTrigger() {
   );
 }
 
-function UserMenu() {
+function UserMenu({ compactOnMobile = false }: { compactOnMobile?: boolean }) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -111,13 +111,15 @@ function UserMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="true"
         aria-expanded={open}
+        aria-label={`User menu for ${user.name}`}
       >
         <div className="user-avatar" aria-hidden="true">
           {initials}
         </div>
-        <span className="user-name">{user.name}</span>
+        <span className={`user-name ${compactOnMobile ? 'hidden sm:inline' : ''}`}>{user.name}</span>
         <ChevronDown
           size={16}
+          className={compactOnMobile ? 'hidden sm:inline' : ''}
           style={{
             color: 'var(--ink-muted)',
             transform: open ? 'rotate(180deg)' : undefined,
@@ -205,7 +207,10 @@ export function MobileTopBar() {
           Snack<span style={{ color: 'var(--primary)' }}>Overflow</span>
         </span>
       </div>
-      <CartTrigger />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <CartTrigger />
+        <UserMenu compactOnMobile={true} />
+      </div>
     </header>
   );
 }

@@ -95,12 +95,18 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Responsive layout CSS */}
       <style>{`
+        @media (max-width: 767px) {
+          #page-content {
+            padding: 16px 14px !important;
+            padding-bottom: calc(84px + env(safe-area-inset-bottom)) !important;
+          }
+        }
         @media (min-width: 768px) {
           #mobile-topbar-wrapper { display: none !important; }
           #desktop-topbar-wrapper { display: block !important; }
           #bottom-tab-wrapper { display: none !important; }
           #app-main { margin-left: var(--sidebar-rail) !important; }
-          #page-content { padding-bottom: 24px !important; }
+          #page-content { padding: 24px !important; }
         }
         @media (min-width: 1024px) {
           #app-main { margin-left: var(--sidebar-width) !important; }

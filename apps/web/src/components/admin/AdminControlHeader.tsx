@@ -113,6 +113,8 @@ export function AdminControlHeader({
               fontSize: 13,
               fontWeight: 800,
               minHeight: 44,
+              flexWrap: 'wrap',
+              maxWidth: '100%',
             }}
           >
             {needsAttention ? (
@@ -172,7 +174,7 @@ export function AdminControlHeader({
             }}
           >
             <Plus size={18} strokeWidth={3} />
-            <span>+ Add snack</span>
+            <span> Add snack</span>
           </button>
         </div>
       </div>
