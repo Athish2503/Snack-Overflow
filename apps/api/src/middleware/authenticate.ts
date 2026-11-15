@@ -11,7 +11,9 @@ interface JwtPayload {
 
 export const authenticate = async (req: AuthRequest, _res: Response, next: NextFunction) => {
   try {
-    const token = req.cookies.access_token;
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const token = req.cookies?.access_token || bearerToken;
 
     if (!token) {
       throw new ApiError(401, 'UNAUTHORIZED', 'Authentication required');
@@ -47,7 +49,9 @@ export const authenticate = async (req: AuthRequest, _res: Response, next: NextF
 
 export const optionalAuthenticate = async (req: AuthRequest, _res: Response, next: NextFunction) => {
   try {
-    const token = req.cookies.access_token;
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const token = req.cookies?.access_token || bearerToken;
     if (!token) {
       return next();
     }

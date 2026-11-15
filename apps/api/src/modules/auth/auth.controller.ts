@@ -1,14 +1,14 @@
-import { Request, Response } from 'express';
+import { Request, Response, CookieOptions } from 'express';
 import { AuthService } from './auth.service.js';
 import { AuthRequest } from '../../types/express.js';
 import { config } from '../../config/env.js';
 
 const COOKIE_NAME = 'access_token';
 
-const cookieOptions = {
+const cookieOptions: CookieOptions = {
   httpOnly: true,
   secure: config.nodeEnv === 'production',
-  sameSite: 'lax' as const,
+  sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
@@ -44,7 +44,7 @@ export class AuthController {
     res.clearCookie(COOKIE_NAME, {
       httpOnly: true,
       secure: config.nodeEnv === 'production',
-      sameSite: 'lax',
+      sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
     });
 
     res.status(200).json({

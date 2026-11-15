@@ -9,7 +9,9 @@ import path from 'path';
 import crypto from 'crypto';
 
 const router = Router();
-const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+const uploadsDir = fs.existsSync(path.join(process.cwd(), 'apps', 'api'))
+  ? path.join(process.cwd(), 'apps', 'api', 'public', 'uploads')
+  : path.join(process.cwd(), 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }

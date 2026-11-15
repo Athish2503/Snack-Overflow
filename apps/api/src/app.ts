@@ -18,6 +18,8 @@ import { AuthRequest } from './types/express.js';
 export const createApp = (): Express => {
   const app = express();
 
+  app.set('trust proxy', 1);
+
   app.use(cors({
     origin: config.clientUrl,
     credentials: true,
@@ -26,7 +28,9 @@ export const createApp = (): Express => {
   app.use(express.json({ limit: '20mb' }));
 
   // Static uploads directory
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+  const uploadsDir = fs.existsSync(path.join(process.cwd(), 'apps', 'api'))
+    ? path.join(process.cwd(), 'apps', 'api', 'public', 'uploads')
+    : path.join(process.cwd(), 'public', 'uploads');
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
