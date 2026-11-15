@@ -16,6 +16,7 @@ interface AuthContextValue {
   isLoading: boolean;
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -55,6 +56,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u);
   }, []);
 
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    const res = await api.post<AuthResponse>('/auth/register', {
+      name,
+      email,
+      password,
+    });
+    const u = res.user ?? res.data?.user;
+    if (!u) {
+      throw new Error('User not returned from server');
+    }
+    setUser(u);
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await api.post('/auth/logout');
@@ -72,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAdmin: user?.role === 'ADMIN',
         login,
+        register,
         logout,
       }}
     >

@@ -127,4 +127,59 @@ describe('Auth & RBAC Module', () => {
     const cookieHeader = Array.isArray(cookies) ? cookies.join(';') : (cookies as unknown as string);
     expect(cookieHeader).toContain('access_token=;');
   });
+
+  describe('User Registration', () => {
+    const newEmail = `newuser_${Date.now()}@snackoverflow.local`;
+
+    it('validates registration input requirements', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'A', // too short
+          email: 'invalid-email',
+          password: '123', // too short
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBeDefined();
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('registers a new member successfully, setting session cookie and returning user', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Jane Doe',
+          email: newEmail,
+          password: 'securePassword123',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.user).toBeDefined();
+      expect(res.body.user.name).toBe('Jane Doe');
+      expect(res.body.user.email).toBe(newEmail.toLowerCase());
+      expect(res.body.user.role).toBe('MEMBER');
+      expect(res.body.user.password).toBeUndefined();
+
+      const cookies = res.headers['set-cookie'];
+      expect(cookies).toBeDefined();
+      const cookieHeader = Array.isArray(cookies) ? cookies.join(';') : (cookies as unknown as string);
+      expect(cookieHeader).toContain('access_token=');
+      expect(cookieHeader.toLowerCase()).toContain('httponly');
+    });
+
+    it('rejects registration if email already exists', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Duplicate Jane',
+          email: newEmail,
+          password: 'securePassword123',
+        });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error).toBeDefined();
+      expect(res.body.error.code).toBe('EMAIL_EXISTS');
+    });
+  });
 });

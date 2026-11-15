@@ -13,6 +13,16 @@ const cookieOptions = {
 };
 
 export class AuthController {
+  static async register(req: Request, res: Response) {
+    const { user, token } = await AuthService.register(req.body);
+
+    res.cookie(COOKIE_NAME, token, cookieOptions);
+
+    res.status(201).json({
+      user,
+    });
+  }
+
   static async login(req: Request, res: Response) {
     const { user, token } = await AuthService.login(req.body);
 

@@ -2,8 +2,9 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Sparkles } from 'lucide-react';
 import { SnackCategory } from '@/lib/types';
+import { CategoryIcon, CATEGORIES } from '@/lib/snackHelpers';
 
 interface BrowseByMoodProps {
   categoryCounts?: Record<SnackCategory, number>;
@@ -12,41 +13,35 @@ interface BrowseByMoodProps {
 export function BrowseByMood({ categoryCounts }: BrowseByMoodProps) {
   const moods: Array<{
     category?: SnackCategory;
-    emoji: string;
     label: string;
     href: string;
     countKey?: SnackCategory;
   }> = [
     {
       category: 'SWEET',
-      emoji: '🍬',
       label: 'Sweet',
       href: '/snacks?category=SWEET',
       countKey: 'SWEET',
     },
     {
       category: 'SAVOURY',
-      emoji: '🥨',
       label: 'Savoury',
       href: '/snacks?category=SAVOURY',
       countKey: 'SAVOURY',
     },
     {
       category: 'DRINK',
-      emoji: '🥤',
       label: 'Drink',
       href: '/snacks?category=DRINK',
       countKey: 'DRINK',
     },
     {
       category: 'HEALTHY_ISH',
-      emoji: '🥕',
       label: 'Healthy-ish',
       href: '/snacks?category=HEALTHY_ISH',
       countKey: 'HEALTHY_ISH',
     },
     {
-      emoji: '✨',
       label: 'All snacks',
       href: '/snacks',
     },
@@ -76,6 +71,7 @@ export function BrowseByMood({ categoryCounts }: BrowseByMoodProps) {
         {moods.map((m) => {
           const count = m.countKey && categoryCounts ? categoryCounts[m.countKey] : null;
           const isAll = !m.countKey;
+          const meta = m.category ? CATEGORIES[m.category] : null;
 
           return (
             <Link
@@ -96,10 +92,29 @@ export function BrowseByMood({ categoryCounts }: BrowseByMoodProps) {
                 transition: 'all 120ms ease',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 22 }} role="img" aria-hidden="true">
-                  {m.emoji}
-                </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 'var(--radius-sm)',
+                    background: meta ? meta.bgSoft : 'var(--primary)',
+                    border: '2px solid var(--ink)',
+                    boxShadow: '2px 2px 0 var(--ink)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--ink)',
+                    flexShrink: 0,
+                  }}
+                  aria-hidden="true"
+                >
+                  {m.category ? (
+                    <CategoryIcon category={m.category} size={20} />
+                  ) : (
+                    <Sparkles size={20} strokeWidth={2.4} />
+                  )}
+                </div>
                 <span
                   style={{
                     fontFamily: 'var(--font-bricolage), sans-serif',
