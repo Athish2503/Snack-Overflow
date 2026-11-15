@@ -24,8 +24,9 @@ export class SnackController {
     res.status(200).json(snack);
   }
 
-  static async getSummary(_req: AuthRequest, res: Response) {
-    const summary = await SnackService.getSummary();
+  static async getSummary(req: AuthRequest, res: Response) {
+    const currentUserId = req.user?.id;
+    const summary = await SnackService.getSummary(currentUserId);
     res.status(200).json(summary);
   }
 

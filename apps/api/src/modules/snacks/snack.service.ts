@@ -23,7 +23,7 @@ export interface FormattedSnack {
 
 export class SnackService {
   static async getSnacks(query: SnackQueryInput, currentUserId?: string) {
-    const { page, limit, search, category, status, favoritesOnly, sortBy, sortOrder } = query;
+    const { page, limit, search, category, status, favoritesOnly, votedOnly, sortBy, sortOrder } = query;
     const offset = (page - 1) * limit;
 
     const whereConditions: Prisma.Sql[] = [Prisma.sql`s."archivedAt" IS NULL`];
@@ -51,6 +51,10 @@ export class SnackService {
       whereConditions.push(Prisma.sql`EXISTS (SELECT 1 FROM "Favorite" fav WHERE fav."snackId" = s."id" AND fav."userId" = ${currentUserId})`);
     }
 
+    if (votedOnly && currentUserId) {
+      whereConditions.push(Prisma.sql`EXISTS (SELECT 1 FROM "Vote" v_user WHERE v_user."snackId" = s."id" AND v_user."userId" = ${currentUserId})`);
+    }
+
     const whereClause = Prisma.sql`WHERE ${Prisma.join(whereConditions, ' AND ')}`;
 
     const countResult = await prisma.$queryRaw<[{ count: bigint }]>`
@@ -66,6 +70,8 @@ export class SnackService {
       orderByColumn = Prisma.sql`s."quantity"`;
     } else if (sortBy === 'createdAt') {
       orderByColumn = Prisma.sql`s."createdAt"`;
+    } else if (sortBy === 'votes') {
+      orderByColumn = Prisma.sql`COALESCE(v.vote_count, 0)`;
     }
     const orderDirection = sortOrder === 'desc' ? Prisma.sql`DESC` : Prisma.sql`ASC`;
 
@@ -197,18 +203,26 @@ export class SnackService {
     };
   }
 
-  static async getSummary() {
+  static async getSummary(currentUserId?: string) {
     const countRows = await prisma.$queryRaw<
       Array<{
         stocked: bigint;
         running_low: bigint;
         gone: bigint;
+        sweet: bigint;
+        savoury: bigint;
+        drink: bigint;
+        healthy_ish: bigint;
       }>
     >`
       SELECT
         COUNT(*) FILTER (WHERE "quantity" > "lowStockThreshold") as stocked,
         COUNT(*) FILTER (WHERE "quantity" > 0 AND "quantity" <= "lowStockThreshold") as running_low,
-        COUNT(*) FILTER (WHERE "quantity" = 0) as gone
+        COUNT(*) FILTER (WHERE "quantity" = 0) as gone,
+        COUNT(*) FILTER (WHERE "category" = 'SWEET') as sweet,
+        COUNT(*) FILTER (WHERE "category" = 'SAVOURY') as savoury,
+        COUNT(*) FILTER (WHERE "category" = 'DRINK') as drink,
+        COUNT(*) FILTER (WHERE "category" = 'HEALTHY_ISH') as healthy_ish
       FROM "Snack"
       WHERE "archivedAt" IS NULL
     `;
@@ -217,6 +231,12 @@ export class SnackService {
       stocked: Number(countRows[0]?.stocked || 0),
       running_low: Number(countRows[0]?.running_low || 0),
       gone: Number(countRows[0]?.gone || 0),
+      categories: {
+        SWEET: Number(countRows[0]?.sweet || 0),
+        SAVOURY: Number(countRows[0]?.savoury || 0),
+        DRINK: Number(countRows[0]?.drink || 0),
+        HEALTHY_ISH: Number(countRows[0]?.healthy_ish || 0),
+      },
     };
 
     const weekStartResult = await prisma.$queryRaw<[{ week_start: Date }]>`
@@ -229,43 +249,76 @@ export class SnackService {
         id: string;
         name: string;
         category: SnackCategory;
+        quantity: number;
+        lowStockThreshold: number;
         calories: number | null;
         imageUrl: string | null;
         images: string[];
+        createdAt: Date;
+        updatedAt: Date;
         weeklyVotes: bigint;
+        lifetimeVotes: bigint;
       }>
     >`
       SELECT 
         s."id",
         s."name",
         s."category",
+        s."quantity",
+        s."lowStockThreshold",
         s."calories",
         s."imageUrl",
         s."images",
+        s."createdAt",
+        s."updatedAt",
         COUNT(v."id") FILTER (WHERE v."createdAt" >= ${weekStart}) as "weeklyVotes",
         COUNT(v."id") as "lifetimeVotes"
       FROM "Snack" s
       LEFT JOIN "Vote" v ON v."snackId" = s."id"
       WHERE s."archivedAt" IS NULL
-      GROUP BY s."id", s."name", s."category", s."calories", s."imageUrl", s."images"
+      GROUP BY s."id", s."name", s."category", s."quantity", s."lowStockThreshold", s."calories", s."imageUrl", s."images", s."createdAt", s."updatedAt"
       HAVING COUNT(v."id") FILTER (WHERE v."createdAt" >= ${weekStart}) > 0
       ORDER BY "weeklyVotes" DESC, "lifetimeVotes" DESC, s."name" ASC
       LIMIT 1
     `;
 
-    let snackOfTheWeek = null;
+    let snackOfTheWeek: FormattedSnack | null = null;
     if (topSnack.length > 0 && Number(topSnack[0].weeklyVotes) > 0) {
-      const rawImages = Array.isArray(topSnack[0].images) ? topSnack[0].images : [];
-      const images = rawImages.length > 0 ? rawImages : (topSnack[0].imageUrl ? [topSnack[0].imageUrl] : []);
-      const imageUrl = topSnack[0].imageUrl || (images.length > 0 ? images[0] : null);
+      const top = topSnack[0];
+      const rawImages = Array.isArray(top.images) ? top.images : [];
+      const images = rawImages.length > 0 ? rawImages : (top.imageUrl ? [top.imageUrl] : []);
+      const imageUrl = top.imageUrl || (images.length > 0 ? images[0] : null);
+
+      let hasVoted = false;
+      let isFavorite = false;
+      if (currentUserId) {
+        const [userVote, userFav] = await Promise.all([
+          prisma.vote.findUnique({
+            where: { userId_snackId: { userId: currentUserId, snackId: top.id } },
+          }),
+          prisma.favorite.findUnique({
+            where: { userId_snackId: { userId: currentUserId, snackId: top.id } },
+          }),
+        ]);
+        hasVoted = Boolean(userVote);
+        isFavorite = Boolean(userFav);
+      }
+
       snackOfTheWeek = {
-        id: topSnack[0].id,
-        name: topSnack[0].name,
-        category: topSnack[0].category,
-        calories: topSnack[0].calories,
+        id: top.id,
+        name: top.name,
+        category: top.category,
+        quantity: top.quantity,
+        lowStockThreshold: top.lowStockThreshold,
+        calories: top.calories,
         imageUrl,
         images,
-        voteCount: Number(topSnack[0].weeklyVotes),
+        status: getSnackStatus(top.quantity, top.lowStockThreshold),
+        voteCount: Number(top.weeklyVotes),
+        hasVoted,
+        isFavorite,
+        createdAt: top.createdAt,
+        updatedAt: top.updatedAt,
       };
     }
 

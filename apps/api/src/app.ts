@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import snackRoutes from './modules/snacks/snack.routes.js';
 import activityRoutes from './modules/activity/activity.routes.js';
+import adminRoutes from './modules/admin/admin.routes.js';
 import uploadRoutes from './modules/upload/upload.routes.js';
 import { authenticate } from './middleware/authenticate.js';
 import { requireAdmin } from './middleware/authorize.js';
@@ -55,6 +56,10 @@ export const createApp = (): Express => {
   // Activity routes mounted under /api/activity and /activity (Admin only)
   app.use('/api/activity', activityRoutes);
   app.use('/activity', activityRoutes);
+
+  // Admin routes mounted under /api/admin and /admin (Admin only)
+  app.use('/api/admin', adminRoutes);
+  app.use('/admin', adminRoutes);
 
   // Test endpoints for RBAC verification
   app.get('/api/test/protected', authenticate, (req: AuthRequest, res: Response) => {

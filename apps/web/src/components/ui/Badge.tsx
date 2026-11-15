@@ -4,20 +4,20 @@ import React from 'react';
 import { clsx } from 'clsx';
 import { Check, AlertTriangle, X } from 'lucide-react';
 
-export type StockStatus = 'stocked' | 'running_low' | 'running-low' | 'gone';
-type BadgeVariant = 'stocked' | 'running_low' | 'running-low' | 'gone' | 'admin' | 'member' | 'custom';
+export type StockStatus = 'stocked' | 'running_low' | 'running-low' | 'gone' | 'low';
+type BadgeVariant = 'stocked' | 'running_low' | 'running-low' | 'gone' | 'low' | 'admin' | 'member' | 'custom';
 
 interface BadgeProps {
   variant?: BadgeVariant;
   status?: StockStatus;
-  label: string;
+  label?: string;
   icon?: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
 }
 
 const statusConfig: Record<
-  'stocked' | 'running_low' | 'running-low' | 'gone',
+  StockStatus,
   { bg: string; color: string; icon: React.ReactNode; label: string }
 > = {
   stocked: {
@@ -38,6 +38,12 @@ const statusConfig: Record<
     icon: <AlertTriangle size={11} strokeWidth={2.8} />,
     label: 'Running low',
   },
+  low: {
+    bg: 'var(--running-low-soft)',
+    color: 'var(--running-low-ink)',
+    icon: <AlertTriangle size={11} strokeWidth={2.8} />,
+    label: 'Low stock',
+  },
   gone: {
     bg: 'var(--gone-soft)',
     color: 'var(--gone-ink)',
@@ -48,6 +54,7 @@ const statusConfig: Record<
 
 const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
   stocked: { background: 'var(--stocked-soft)', color: 'var(--stocked-ink)' },
+  low: { background: 'var(--running-low-soft)', color: 'var(--running-low-ink)' },
   'running-low': {
     background: 'var(--running-low-soft)',
     color: 'var(--running-low-ink)',

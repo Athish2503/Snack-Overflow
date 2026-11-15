@@ -109,4 +109,5 @@ model Activity {
   @@index([snackId, createdAt])
   @@index([userId, createdAt])
   @@index([createdAt])
+  @@index([snackId, action, createdAt])
 }

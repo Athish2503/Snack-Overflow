@@ -45,6 +45,15 @@ export function SnackCard({ snack, onUpdated, onSelect }: SnackCardProps) {
 
   const isGone = snack.quantity <= 0;
   const isRunningLow = snack.status === 'running_low';
+
+  // Calculate if restocked within last 24 hours
+  const isRestockedRecently = React.useState(() => {
+    if (isGone || !snack.updatedAt) return false;
+    const updatedTime = new Date(snack.updatedAt).getTime();
+    const createdTime = new Date(snack.createdAt).getTime();
+    if (updatedTime - createdTime < 1000) return false;
+    return Date.now() - updatedTime < 24 * 60 * 60 * 1000;
+  })[0];
   const categoryMeta = CATEGORIES[snack.category] ?? CATEGORIES.SWEET;
   const ratio = getStockRatio(snack.quantity, snack.lowStockThreshold);
   const inCartQty = getItemQuantity(snack.id);
@@ -307,6 +316,30 @@ export function SnackCard({ snack, onUpdated, onSelect }: SnackCardProps) {
               showArrows={snackImages.length > 1}
               overlayBadge={
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', maxWidth: '100%' }}>
+                  {isRestockedRecently && (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 10,
+                        fontWeight: 900,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                        padding: '3px 7px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: '#10B981',
+                        color: '#ffffff',
+                        border: '1.5px solid var(--ink)',
+                        boxShadow: '1.5px 1.5px 0 var(--ink)',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title="Restocked in the last 24 hours"
+                    >
+                      ✨ Restocked
+                    </span>
+                  )}
+
                   <span
                     style={{
                       display: 'inline-flex',
@@ -495,22 +528,24 @@ export function SnackCard({ snack, onUpdated, onSelect }: SnackCardProps) {
         {/* Action Row: Row 1 (Stepper + Add to bag), Row 2 (Consume now) */}
         <div>
           {isGone ? (
-            <button
-              disabled
-              style={{
-                width: '100%',
-                height: 44,
-                borderRadius: 'var(--radius-sm)',
-                background: 'var(--surface-2)',
-                border: '2px solid rgba(27,27,47,0.2)',
-                color: 'var(--ink-muted)',
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: 'not-allowed',
-              }}
-            >
-              Out of stock
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <button
+                disabled
+                style={{
+                  width: '100%',
+                  height: 44,
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--surface-2)',
+                  border: '2px solid rgba(27,27,47,0.2)',
+                  color: 'var(--ink-muted)',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'not-allowed',
+                }}
+              >
+                Ask an admin to restock
+              </button>
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
               {/* Row 1: Quantity stepper + Primary "Add to bag" button */}

@@ -37,16 +37,9 @@ export interface SnackSummary {
     stocked: number;
     running_low: number;
     gone: number;
+    categories?: Record<SnackCategory, number>;
   };
-  snackOfTheWeek: {
-    id: string;
-    name: string;
-    category?: SnackCategory;
-    calories?: number | null;
-    imageUrl?: string | null;
-    images?: string[];
-    voteCount: number;
-  } | null;
+  snackOfTheWeek: Snack | null;
 }
 
 export interface CartItem {
@@ -102,3 +95,51 @@ export interface ActivityListResponse {
   data: ActivityItem[];
   pagination: PaginationMeta;
 }
+
+export interface AdminDashboardCounts {
+  total: number;
+  stocked: number;
+  low: number;
+  gone: number;
+}
+
+export interface AdminNeedsRestockItem {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  category: SnackCategory;
+  quantity: number;
+  lowStockThreshold: number;
+  status: 'gone' | 'low';
+}
+
+export interface AdminRecentActivityItem {
+  id: string;
+  userName: string;
+  snackName: string;
+  action: ActivityAction;
+  amount: number;
+  createdAt: string;
+}
+
+export interface AdminConsumptionDay {
+  date: string;
+  units: number;
+}
+
+export interface AdminMostConsumedItem {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  units: number;
+}
+
+export interface AdminDashboardResponse {
+  counts: AdminDashboardCounts;
+  needsRestock: AdminNeedsRestockItem[];
+  recentActivity: AdminRecentActivityItem[];
+  consumptionLast7Days: AdminConsumptionDay[];
+  mostConsumedThisWeek: AdminMostConsumedItem[];
+  snackOfTheWeek: Snack | null;
+}
+

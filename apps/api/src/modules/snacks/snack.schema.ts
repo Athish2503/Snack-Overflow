@@ -18,12 +18,19 @@ export const snackQuerySchema = z.object({
     }),
   search: z.string().optional(),
   category: z.nativeEnum(SnackCategory).optional(),
-  status: z.enum(['stocked', 'running_low', 'gone']).optional(),
+  status: z
+    .enum(['stocked', 'running_low', 'gone', 'low'])
+    .optional()
+    .transform((val) => (val === 'low' ? 'running_low' : val)),
   favoritesOnly: z
     .string()
     .optional()
     .transform((val) => val === 'true' || val === '1'),
-  sortBy: z.enum(['name', 'quantity', 'createdAt']).optional().default('name'),
+  votedOnly: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true' || val === '1'),
+  sortBy: z.enum(['name', 'quantity', 'createdAt', 'votes']).optional().default('name'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('asc'),
 });
 
