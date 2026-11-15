@@ -1,27 +1,31 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
-import { AdminDashboardResponse } from '@/lib/types';
+import { AdminDashboardResponse, Snack } from '@/lib/types';
 import { AdminControlHeader } from './AdminControlHeader';
+import { SnackOfTheWeekHero } from '@/components/dashboard/SnackOfTheWeekHero';
 import { PantryHealthTile } from './PantryHealthTile';
 import { NeedsRestockTile } from './NeedsRestockTile';
 import { LiveActivityTile } from './LiveActivityTile';
-import { SnackOfTheWeekTile } from './SnackOfTheWeekTile';
 import { ConsumptionChartTile } from './ConsumptionChartTile';
 import { MostConsumedTile } from './MostConsumedTile';
-import { QuickActionsTile } from './QuickActionsTile';
+import { AddSnackModal } from './AddSnackModal';
+import { RestockModal } from './RestockModal';
 
 export function AdminControlRoom() {
   const { user } = useAuth();
+  const [isAddSnackOpen, setIsAddSnackOpen] = useState(false);
+  const [restockModalSnack, setRestockModalSnack] = useState<Snack | null>(null);
 
   const {
     data,
     isLoading,
     isError,
     refetch,
+    dataUpdatedAt,
   } = useQuery<AdminDashboardResponse>({
     queryKey: ['admin-dashboard'],
     queryFn: () => api.get<AdminDashboardResponse>('/admin/dashboard'),
@@ -34,6 +38,7 @@ export function AdminControlRoom() {
   const needsRestock = data?.needsRestock ?? [];
   const recentActivity = data?.recentActivity ?? [];
   const consumptionLast7Days = data?.consumptionLast7Days ?? [];
+  const consumptionAverage = data?.consumptionAverage ?? 0;
   const mostConsumedThisWeek = data?.mostConsumedThisWeek ?? [];
   const snackOfTheWeek = data?.snackOfTheWeek ?? null;
 
@@ -42,129 +47,138 @@ export function AdminControlRoom() {
       style={{
         maxWidth: 1440,
         margin: '0 auto',
-        padding: '0 4px 32px',
+        padding: '0 8px 36px',
         display: 'flex',
         flexDirection: 'column',
         gap: 20,
       }}
     >
       <style>{`
-        /* Bento Grid Layout System */
+        /* ── Bento Grid System with Explicit Areas & Equal Row Heights ── */
         .admin-bento-grid {
           display: grid;
           gap: 18px;
-          grid-template-columns: repeat(12, 1fr);
+          align-items: stretch;
         }
 
-        /* Desktop lg+ (>= 1024px) */
-        @media (min-width: 1024px) {
+        /* Desktop lg+ (>= 1200px, 12 cols, explicit grid areas, equal row heights, no dead space) */
+        @media (min-width: 1200px) {
+          .admin-bento-grid {
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-areas:
+              "hero hero hero hero hero hero hero hero hero hero hero hero"
+              "health health health health needs needs needs needs activity activity activity activity"
+              "consumption consumption consumption consumption consumption consumption consumption most most most most most";
+          }
+          .tile-hero {
+            grid-area: hero;
+          }
           .tile-health {
-            grid-column: span 6;
-            grid-row: span 2;
+            grid-area: health;
+            min-height: 440px;
           }
           .tile-needs-restock {
-            grid-column: span 3;
-            grid-row: span 2;
+            grid-area: needs;
+            min-height: 440px;
           }
           .tile-live-activity {
-            grid-column: span 3;
-            grid-row: span 2;
-          }
-          .tile-snack-of-the-week {
-            grid-column: span 6;
-            grid-row: span 1;
+            grid-area: activity;
+            min-height: 440px;
           }
           .tile-consumption {
-            grid-column: span 6;
-            grid-row: span 1;
+            grid-area: consumption;
+            min-height: 300px;
           }
           .tile-most-consumed {
-            grid-column: span 6;
-            grid-row: span 1;
-          }
-          .tile-quick-actions {
-            grid-column: span 6;
-            grid-row: span 1;
+            grid-area: most;
+            min-height: 300px;
           }
         }
 
-        /* Tablet md (768px - 1023px): 6 columns */
-        @media (min-width: 768px) and (max-width: 1023px) {
+        /* Tablet md (768px - 1199px, 6 cols) */
+        @media (min-width: 768px) and (max-width: 1199px) {
           .admin-bento-grid {
             grid-template-columns: repeat(6, 1fr);
             gap: 16px;
           }
+          .tile-hero {
+            grid-column: span 6;
+            order: 1;
+          }
           .tile-health {
             grid-column: span 6;
+            order: 2;
           }
           .tile-needs-restock {
             grid-column: span 3;
+            order: 3;
           }
           .tile-live-activity {
             grid-column: span 3;
-          }
-          .tile-snack-of-the-week {
-            grid-column: span 6;
+            order: 4;
           }
           .tile-consumption {
             grid-column: span 6;
+            order: 5;
           }
           .tile-most-consumed {
-            grid-column: span 3;
-          }
-          .tile-quick-actions {
-            grid-column: span 3;
+            grid-column: span 6;
+            order: 6;
           }
         }
 
-        /* Mobile (< 768px): single column, exact requested order */
+        /* Mobile (< 768px): single column, exact requested order:
+           Needs restock, Pantry health, Hero, Activity, Consumption, Most consumed */
         @media (max-width: 767px) {
           .admin-bento-grid {
-            grid-template-columns: 1fr;
+            display: flex;
+            flex-direction: column;
             gap: 16px;
           }
-          .tile-needs-restock {
+          .mobile-order-needs {
             order: 1;
-            grid-column: span 1;
           }
-          .tile-health {
+          .mobile-order-health {
             order: 2;
-            grid-column: span 1;
           }
-          .tile-snack-of-the-week {
+          .mobile-order-hero {
             order: 3;
-            grid-column: span 1;
           }
-          .tile-live-activity {
+          .mobile-order-activity {
             order: 4;
-            grid-column: span 1;
           }
-          .tile-consumption {
+          .mobile-order-consumption {
             order: 5;
-            grid-column: span 1;
           }
-          .tile-most-consumed {
+          .mobile-order-most {
             order: 6;
-            grid-column: span 1;
-          }
-          .tile-quick-actions {
-            order: 7;
-            grid-column: span 1;
           }
         }
       `}</style>
 
-      {/* Top Greeting & Stock Alert Line */}
+      {/* Top Greeting, Alert Banner, + Add snack button, and Updated Ns ago */}
       <AdminControlHeader
         adminName={adminName}
         goneCount={counts.gone}
         lowCount={counts.low}
+        dataUpdatedAt={dataUpdatedAt}
+        onAddSnackClick={() => setIsAddSnackOpen(true)}
       />
 
       {/* Main Bento Grid */}
       <div className="admin-bento-grid">
-        {/* 1. Pantry Health Tile */}
-        <div className="tile-health">
+        {/* Full-width Snack of the Week Hero Banner */}
+        <div id="admin-hero-banner" className="tile-hero mobile-order-hero" style={{ width: '100%' }}>
+          <SnackOfTheWeekHero
+            snack={snackOfTheWeek}
+            variant="admin"
+            isLoading={isLoading}
+            onUpdated={() => refetch()}
+            onRestockClick={(s) => setRestockModalSnack(s)}
+          />
+        </div>
+        {/* Row 1, Col 1: Pantry Health Tile (4 cols desktop, min-height ~440px) */}
+        <div className="tile-health mobile-order-health">
           <PantryHealthTile
             counts={counts}
             isLoading={isLoading}
@@ -174,8 +188,8 @@ export function AdminControlRoom() {
           />
         </div>
 
-        {/* 2. Needs Restock Tile */}
-        <div className="tile-needs-restock">
+        {/* Row 1, Col 2: Needs Restock Tile (4 cols desktop, min-height ~440px) */}
+        <div className="tile-needs-restock mobile-order-needs">
           <NeedsRestockTile
             snacks={needsRestock}
             isLoading={isLoading}
@@ -185,21 +199,23 @@ export function AdminControlRoom() {
           />
         </div>
 
-        {/* 3. Live Activity Tile */}
-        <div className="tile-live-activity">
+        {/* Row 1, Col 3: Activity Tile (4 cols desktop, min-height ~440px) */}
+        <div className="tile-live-activity mobile-order-activity">
           <LiveActivityTile
             activities={recentActivity}
             isLoading={isLoading}
             isError={isError}
             onRetry={() => refetch()}
             staggerIndex={2}
+            dataUpdatedAt={dataUpdatedAt}
           />
         </div>
 
-        {/* 4. Snack of the Week Tile */}
-        <div className="tile-snack-of-the-week">
-          <SnackOfTheWeekTile
-            snack={snackOfTheWeek}
+        {/* Row 2, Col 1: Consumption Last 7 Days (7 cols desktop, min-height ~300px) */}
+        <div className="tile-consumption mobile-order-consumption">
+          <ConsumptionChartTile
+            days={consumptionLast7Days}
+            average={consumptionAverage}
             isLoading={isLoading}
             isError={isError}
             onRetry={() => refetch()}
@@ -207,39 +223,34 @@ export function AdminControlRoom() {
           />
         </div>
 
-        {/* 5. Consumption Last 7 Days Tile */}
-        <div className="tile-consumption">
-          <ConsumptionChartTile
-            days={consumptionLast7Days}
+        {/* Row 2, Col 2: Most Consumed This Week (5 cols desktop, min-height ~300px) */}
+        <div className="tile-most-consumed mobile-order-most">
+          <MostConsumedTile
+            snacks={mostConsumedThisWeek}
             isLoading={isLoading}
             isError={isError}
             onRetry={() => refetch()}
             staggerIndex={4}
           />
         </div>
-
-        {/* 6. Most Consumed Tile */}
-        <div className="tile-most-consumed">
-          <MostConsumedTile
-            snacks={mostConsumedThisWeek}
-            isLoading={isLoading}
-            isError={isError}
-            onRetry={() => refetch()}
-            staggerIndex={5}
-          />
-        </div>
-
-        {/* 7. Quick Actions Tile */}
-        <div className="tile-quick-actions">
-          <QuickActionsTile
-            needsRestockSnacks={needsRestock}
-            isLoading={isLoading}
-            isError={isError}
-            onRetry={() => refetch()}
-            staggerIndex={6}
-          />
-        </div>
       </div>
+
+      {/* Add Snack Dialog */}
+      <AddSnackModal
+        isOpen={isAddSnackOpen}
+        onClose={() => {
+          setIsAddSnackOpen(false);
+          refetch();
+        }}
+      />
+
+      {/* Restock Dialog (for hero and any shortcuts) */}
+      <RestockModal
+        isOpen={Boolean(restockModalSnack)}
+        onClose={() => setRestockModalSnack(null)}
+        snack={restockModalSnack}
+        onUpdated={() => refetch()}
+      />
     </div>
   );
 }

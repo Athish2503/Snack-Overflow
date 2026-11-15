@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import Link from 'next/link';
-import { Activity, CheckCircle2, AlertTriangle, XCircle, ArrowUpRight } from 'lucide-react';
+import { Activity, ArrowUpRight } from 'lucide-react';
 import { BentoTile } from './BentoTile';
 import { CountUp } from '@/components/ui/CountUp';
 import { AdminDashboardCounts } from '@/lib/types';
@@ -62,26 +62,13 @@ export function PantryHealthTile({
       isError={isError}
       onRetry={onRetry}
       staggerIndex={staggerIndex}
-      badge={
-        <span
-          className="badge"
-          style={{
-            background: gone > 0 ? 'var(--gone-soft)' : low > 0 ? 'var(--running-low-soft)' : 'var(--stocked-soft)',
-            color: gone > 0 ? 'var(--gone-ink)' : low > 0 ? 'var(--running-low-ink)' : 'var(--stocked-ink)',
-            fontSize: 12,
-            fontWeight: 800,
-          }}
-        >
-          {gone > 0 ? `${gone} Gone` : low > 0 ? `${low} Low` : 'Optimal'}
-        </span>
-      }
       headerAction={
         <Link
           href="/snacks"
           className="focus-ring"
           style={{
             fontSize: 13,
-            fontWeight: 700,
+            fontWeight: 800,
             color: 'var(--ink-muted)',
             display: 'inline-flex',
             alignItems: 'center',
@@ -96,8 +83,8 @@ export function PantryHealthTile({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(140px, 1fr) minmax(180px, 1.2fr)',
-          gap: 24,
+          gridTemplateColumns: 'minmax(160px, 1fr) minmax(180px, 1.2fr)',
+          gap: 20,
           alignItems: 'center',
           height: '100%',
         }}
@@ -117,21 +104,35 @@ export function PantryHealthTile({
             stroke-width: 14;
             cursor: pointer;
           }
-          @media (max-width: 540px) {
+          .legend-link:hover {
+            transform: translateY(-1px);
+            background: var(--surface) !important;
+            box-shadow: 2px 2px 0 var(--ink);
+          }
+          @container (max-width: 380px) {
             .pantry-health-content {
               grid-template-columns: 1fr !important;
               justify-items: center;
               text-align: center;
+              gap: 16px;
+            }
+          }
+          @media (max-width: 640px) {
+            .pantry-health-content {
+              grid-template-columns: 1fr !important;
+              justify-items: center;
+              text-align: center;
+              gap: 16px;
             }
           }
         `}</style>
 
-        {/* ── Donut Chart ── */}
+        {/* ── Larger Donut Chart ── */}
         <div
           style={{
             position: 'relative',
-            width: 160,
-            height: 160,
+            width: 180,
+            height: 180,
             margin: '0 auto',
             display: 'flex',
             alignItems: 'center',
@@ -145,7 +146,7 @@ export function PantryHealthTile({
               r="15.91549430918954"
               fill="transparent"
               stroke="var(--surface-2)"
-              strokeWidth="10"
+              strokeWidth="9"
             />
             {total > 0 ? (
               <>
@@ -157,7 +158,7 @@ export function PantryHealthTile({
                   r="15.91549430918954"
                   fill="transparent"
                   stroke="var(--stocked)"
-                  strokeWidth="10"
+                  strokeWidth="9"
                   strokeDasharray={stockedDash}
                   strokeDashoffset={stockedOffset}
                 />
@@ -169,7 +170,7 @@ export function PantryHealthTile({
                   r="15.91549430918954"
                   fill="transparent"
                   stroke="var(--running-low)"
-                  strokeWidth="10"
+                  strokeWidth="9"
                   strokeDasharray={lowDash}
                   strokeDashoffset={lowOffset}
                 />
@@ -181,7 +182,7 @@ export function PantryHealthTile({
                   r="15.91549430918954"
                   fill="transparent"
                   stroke="var(--gone)"
-                  strokeWidth="10"
+                  strokeWidth="9"
                   strokeDasharray={goneDash}
                   strokeDashoffset={goneOffset}
                 />
@@ -189,7 +190,7 @@ export function PantryHealthTile({
             ) : null}
           </svg>
 
-          {/* Center stats */}
+          {/* Center total number with mono tabular-nums */}
           <div
             style={{
               position: 'absolute',
@@ -202,8 +203,8 @@ export function PantryHealthTile({
           >
             <span
               style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 32,
+                fontFamily: 'var(--font-jetbrains-mono), monospace',
+                fontSize: 36,
                 fontWeight: 900,
                 color: 'var(--ink)',
                 lineHeight: 1,
@@ -215,24 +216,24 @@ export function PantryHealthTile({
             <span
               style={{
                 fontSize: 11,
-                fontWeight: 700,
+                fontWeight: 800,
                 color: 'var(--ink-muted)',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                marginTop: 2,
+                letterSpacing: '0.08em',
+                marginTop: 4,
               }}
             >
-              Snacks
+              Total Snacks
             </span>
           </div>
         </div>
 
-        {/* ── Status breakdown links ── */}
+        {/* ── Three Legend Rows: Stocked, Low Stock, Gone with count and percent ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
-          {/* Stocked Link */}
+          {/* 1. Stocked Legend Row */}
           <Link
             href="/snacks?status=stocked"
-            className="focus-ring"
+            className="legend-link focus-ring"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -243,10 +244,10 @@ export function PantryHealthTile({
               background: 'var(--surface-2)',
               color: 'var(--ink)',
               textDecoration: 'none',
-              transition: 'transform 120ms ease-out, background 120ms ease-out',
+              transition: 'all 120ms ease-out',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span
                 style={{
                   width: 12,
@@ -258,30 +259,38 @@ export function PantryHealthTile({
                 }}
                 aria-hidden="true"
               />
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700, fontSize: 14 }}>
-                <CheckCircle2 size={15} color="var(--stocked)" />
-                Stocked
-              </span>
+              <span style={{ fontSize: 13, fontWeight: 800 }}>Stocked</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span
                 style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 16,
-                  fontWeight: 800,
+                  fontFamily: 'var(--font-jetbrains-mono), monospace',
+                  fontWeight: 900,
+                  fontSize: 13,
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
-                <CountUp end={stocked} />
+                {stocked}
               </span>
-              <span style={{ fontSize: 12, color: 'var(--ink-muted)', fontWeight: 600 }}>({stockedPct}%)</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: 'var(--ink-muted)',
+                  fontFamily: 'var(--font-jetbrains-mono), monospace',
+                  minWidth: 32,
+                  textAlign: 'right',
+                }}
+              >
+                {stockedPct}%
+              </span>
             </div>
           </Link>
 
-          {/* Running Low Link */}
+          {/* 2. Low Stock Legend Row */}
           <Link
             href="/snacks?status=running_low"
-            className="focus-ring"
+            className="legend-link focus-ring"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -289,13 +298,13 @@ export function PantryHealthTile({
               padding: '10px 14px',
               borderRadius: 'var(--radius-md)',
               border: '2px solid var(--ink)',
-              background: low > 0 ? 'var(--running-low-soft)' : 'var(--surface-2)',
+              background: 'var(--surface-2)',
               color: 'var(--ink)',
               textDecoration: 'none',
-              transition: 'transform 120ms ease-out, background 120ms ease-out',
+              transition: 'all 120ms ease-out',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span
                 style={{
                   width: 12,
@@ -307,30 +316,38 @@ export function PantryHealthTile({
                 }}
                 aria-hidden="true"
               />
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700, fontSize: 14 }}>
-                <AlertTriangle size={15} color="var(--running-low)" />
-                Low Stock
-              </span>
+              <span style={{ fontSize: 13, fontWeight: 800 }}>Low stock</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span
                 style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 16,
-                  fontWeight: 800,
+                  fontFamily: 'var(--font-jetbrains-mono), monospace',
+                  fontWeight: 900,
+                  fontSize: 13,
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
-                <CountUp end={low} />
+                {low}
               </span>
-              <span style={{ fontSize: 12, color: 'var(--ink-muted)', fontWeight: 600 }}>({lowPct}%)</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: 'var(--ink-muted)',
+                  fontFamily: 'var(--font-jetbrains-mono), monospace',
+                  minWidth: 32,
+                  textAlign: 'right',
+                }}
+              >
+                {lowPct}%
+              </span>
             </div>
           </Link>
 
-          {/* Gone Link */}
+          {/* 3. Gone Legend Row */}
           <Link
             href="/snacks?status=gone"
-            className="focus-ring"
+            className="legend-link focus-ring"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -338,13 +355,13 @@ export function PantryHealthTile({
               padding: '10px 14px',
               borderRadius: 'var(--radius-md)',
               border: '2px solid var(--ink)',
-              background: gone > 0 ? 'var(--gone-soft)' : 'var(--surface-2)',
+              background: 'var(--surface-2)',
               color: 'var(--ink)',
               textDecoration: 'none',
-              transition: 'transform 120ms ease-out, background 120ms ease-out',
+              transition: 'all 120ms ease-out',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span
                 style={{
                   width: 12,
@@ -356,23 +373,31 @@ export function PantryHealthTile({
                 }}
                 aria-hidden="true"
               />
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700, fontSize: 14 }}>
-                <XCircle size={15} color="var(--gone)" />
-                Gone
-              </span>
+              <span style={{ fontSize: 13, fontWeight: 800 }}>Gone</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span
                 style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 16,
-                  fontWeight: 800,
+                  fontFamily: 'var(--font-jetbrains-mono), monospace',
+                  fontWeight: 900,
+                  fontSize: 13,
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
-                <CountUp end={gone} />
+                {gone}
               </span>
-              <span style={{ fontSize: 12, color: 'var(--ink-muted)', fontWeight: 600 }}>({gonePct}%)</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: 'var(--ink-muted)',
+                  fontFamily: 'var(--font-jetbrains-mono), monospace',
+                  minWidth: 32,
+                  textAlign: 'right',
+                }}
+              >
+                {gonePct}%
+              </span>
             </div>
           </Link>
         </div>

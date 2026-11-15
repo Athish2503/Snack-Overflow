@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { prisma } from '../src/config/database.js';
@@ -12,6 +12,17 @@ describe('Checkout & Image Upload APIs', () => {
   let memberCookie: string;
   let snack1Id: string;
   let snack2Id: string;
+
+  afterEach(async () => {
+    if (snack1Id || snack2Id) {
+      await prisma.activity.deleteMany({
+        where: { snackId: { in: [snack1Id, snack2Id].filter(Boolean) } },
+      });
+      await prisma.snack.deleteMany({
+        where: { id: { in: [snack1Id, snack2Id].filter(Boolean) } },
+      });
+    }
+  });
 
   beforeEach(async () => {
     const adminLogin = await request(app)

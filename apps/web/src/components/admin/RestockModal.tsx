@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Minus, Plus, ShoppingCart, AlertTriangle } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, AlertTriangle, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { api, ApiError } from '@/lib/api';
-import { Snack } from '@/lib/types';
-import { CategoryIcon } from '@/lib/snackHelpers';
+import { Snack, SnackListResponse } from '@/lib/types';
+import { SnackImage } from '@/components/ui/SnackImage';
 
 interface RestockModalProps {
   isOpen: boolean;
@@ -17,28 +17,44 @@ interface RestockModalProps {
   onUpdated?: () => void;
 }
 
-export function RestockModal({ isOpen, onClose, snack, onUpdated }: RestockModalProps) {
+export function RestockModal({ isOpen, onClose, snack: initialSnack, onUpdated }: RestockModalProps) {
   const queryClient = useQueryClient();
+  const [overrideSnackId, setOverrideSnackId] = useState<string | null>(null);
   const [amount, setAmount] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState('');
 
-  if (!snack) return null;
+  // Fetch all inventory snacks for the picker
+  const { data: allSnacksData } = useQuery<SnackListResponse>({
+    queryKey: ['all-snacks-picker'],
+    queryFn: () => api.get<SnackListResponse>('/snacks?limit=100'),
+    enabled: isOpen,
+  });
 
-  const projectedQuantity = snack.quantity + amount;
+  const allSnacks = allSnacksData?.data || [];
+
+  const currentSnackId = overrideSnackId || initialSnack?.id || (allSnacks.length > 0 ? allSnacks[0].id : '');
+
+  const currentSnack =
+    allSnacks.find((s) => s.id === currentSnackId) ||
+    initialSnack ||
+    (allSnacks.length > 0 ? allSnacks[0] : null);
+
+  const projectedQuantity = currentSnack ? currentSnack.quantity + amount : amount;
 
   async function handleRestock(e: React.FormEvent) {
     e.preventDefault();
-    if (!snack || amount <= 0) return;
+    if (!currentSnack || amount <= 0) return;
 
     setIsLoading(true);
     setServerError('');
 
     try {
-      await api.post(`/snacks/${snack.id}/restock`, { amount });
-      toast.success(`Restocked ${amount} packet${amount > 1 ? 's' : ''} of ${snack.name}!`);
+      await api.post(`/snacks/${currentSnack.id}/restock`, { amount });
+      toast.success(`Restocked +${amount} ${currentSnack.name}!`);
       queryClient.invalidateQueries({ queryKey: ['snacks'] });
       queryClient.invalidateQueries({ queryKey: ['snack-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
       onUpdated?.();
       onClose();
     } catch (err) {
@@ -52,15 +68,17 @@ export function RestockModal({ isOpen, onClose, snack, onUpdated }: RestockModal
     }
   }
 
+  if (!isOpen) return null;
+
   return (
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
       title="Restock Inventory"
-      description={`Add stock to ${snack.name}`}
+      description={currentSnack ? `Add stock to ${currentSnack.name}` : 'Select a snack to restock'}
       maxWidth={460}
     >
-      <form onSubmit={handleRestock} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <form onSubmit={handleRestock} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         {serverError && (
           <div
             className="error-area"
@@ -83,84 +101,135 @@ export function RestockModal({ isOpen, onClose, snack, onUpdated }: RestockModal
           </div>
         )}
 
-        {/* Snack Info Preview Card */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 14,
-            padding: '14px 18px',
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--surface-2)',
-            border: '2px solid var(--ink)',
-          }}
-        >
-          <div
+        {/* Snack Picker Dropdown */}
+        <div>
+          <label
             style={{
-              width: 48,
-              height: 48,
-              borderRadius: 8,
-              background: 'var(--surface)',
-              border: '1.5px solid var(--ink)',
-              overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
+              display: 'block',
+              fontSize: 13,
+              fontWeight: 800,
+              color: 'var(--ink)',
+              marginBottom: 6,
             }}
           >
-            {snack.imageUrl ? (
-              <img
-                src={snack.imageUrl}
-                alt={snack.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              <CategoryIcon category={snack.category} size={24} />
-            )}
-          </div>
-
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h3
+            Select Snack
+          </label>
+          <div style={{ position: 'relative' }}>
+            <select
+              value={currentSnackId}
+              onChange={(e) => setOverrideSnackId(e.target.value)}
+              className="sticker focus-ring"
               style={{
-                fontFamily: 'var(--font-bricolage), sans-serif',
-                fontSize: 17,
+                width: '100%',
+                appearance: 'none',
+                background: 'var(--surface)',
+                border: '2px solid var(--ink)',
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: 'var(--shadow)',
+                padding: '10px 36px 10px 14px',
+                fontSize: 14,
                 fontWeight: 800,
                 color: 'var(--ink)',
-                margin: 0,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                minHeight: 44,
               }}
             >
-              {snack.name}
-            </h3>
-            <div
+              {allSnacks.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.quantity} left)
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={16}
               style={{
-                fontSize: 13,
-                color: 'var(--ink-muted)',
-                marginTop: 2,
-                fontFamily: 'var(--font-jetbrains-mono), monospace',
+                position: 'absolute',
+                right: 12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                color: 'var(--ink)',
               }}
-            >
-              Current: <strong>{snack.quantity}</strong> → Projected:{' '}
-              <strong style={{ color: 'var(--stocked-ink)' }}>{projectedQuantity}</strong>
-            </div>
+            />
           </div>
         </div>
+
+        {/* Snack Info Preview Card */}
+        {currentSnack && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              padding: '14px 18px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--surface-2)',
+              border: '2px solid var(--ink)',
+            }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 8,
+                background: 'var(--surface)',
+                border: '1.5px solid var(--ink)',
+                overflow: 'hidden',
+                flexShrink: 0,
+              }}
+            >
+              <SnackImage
+                src={currentSnack.imageUrl}
+                alt={currentSnack.name}
+                category={currentSnack.category}
+                width="100%"
+                height="100%"
+                iconSize={24}
+              />
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3
+                style={{
+                  fontFamily: 'var(--font-bricolage), sans-serif',
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: 'var(--ink)',
+                  margin: 0,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {currentSnack.name}
+              </h3>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: 'var(--ink-muted)',
+                  marginTop: 2,
+                  fontFamily: 'var(--font-jetbrains-mono), monospace',
+                }}
+              >
+                Current: <strong>{currentSnack.quantity}</strong> &rarr; Projected:{' '}
+                <strong style={{ color: 'var(--stocked-ink)' }}>{projectedQuantity}</strong>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Amount Stepper */}
         <div>
           <label
             style={{
               display: 'block',
-              fontSize: 14,
-              fontWeight: 700,
+              fontSize: 13,
+              fontWeight: 800,
               color: 'var(--ink)',
-              marginBottom: 8,
+              marginBottom: 6,
             }}
           >
-            Amount to Add
+            Quantity to Add
           </label>
           <div
             style={{
@@ -170,7 +239,7 @@ export function RestockModal({ isOpen, onClose, snack, onUpdated }: RestockModal
               border: '2.5px solid var(--ink)',
               borderRadius: 'var(--radius-sm)',
               boxShadow: 'var(--shadow)',
-              height: 52,
+              height: 50,
               overflow: 'hidden',
             }}
           >
@@ -181,7 +250,7 @@ export function RestockModal({ isOpen, onClose, snack, onUpdated }: RestockModal
               aria-label="Decrease restock amount"
               className="focus-ring"
               style={{
-                width: 52,
+                width: 50,
                 height: '100%',
                 display: 'flex',
                 alignItems: 'center',
@@ -209,7 +278,7 @@ export function RestockModal({ isOpen, onClose, snack, onUpdated }: RestockModal
                 border: 'none',
                 fontFamily: 'var(--font-jetbrains-mono), monospace',
                 fontWeight: 900,
-                fontSize: 22,
+                fontSize: 20,
                 color: 'var(--ink)',
                 outline: 'none',
               }}
@@ -222,7 +291,7 @@ export function RestockModal({ isOpen, onClose, snack, onUpdated }: RestockModal
               aria-label="Increase restock amount"
               className="focus-ring"
               style={{
-                width: 52,
+                width: 50,
                 height: '100%',
                 display: 'flex',
                 alignItems: 'center',
@@ -265,7 +334,7 @@ export function RestockModal({ isOpen, onClose, snack, onUpdated }: RestockModal
         </div>
 
         {/* Buttons */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
           <Button
             type="button"
             variant="ghost"

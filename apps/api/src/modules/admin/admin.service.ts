@@ -147,16 +147,25 @@ export class AdminDashboardService {
       gone: countRows[0]?.gone ?? 0,
     };
 
-    // Format needsRestock with derived status
-    const needsRestock = needsRestockRows.map((snack) => ({
-      id: snack.id,
-      name: snack.name,
-      imageUrl: snack.imageUrl,
-      category: snack.category,
-      quantity: snack.quantity,
-      lowStockThreshold: snack.lowStockThreshold,
-      status: (snack.quantity === 0 ? 'gone' : 'low') as 'gone' | 'low',
-    }));
+    // Format needsRestock with derived status and smart suggestedRestock math:
+    // X = max(1, 2*lowStockThreshold - quantity), Y = quantity + X
+    const needsRestock = needsRestockRows.map((snack) => {
+      const amount = Math.max(1, 2 * snack.lowStockThreshold - snack.quantity);
+      const target = snack.quantity + amount;
+      return {
+        id: snack.id,
+        name: snack.name,
+        imageUrl: snack.imageUrl,
+        category: snack.category,
+        quantity: snack.quantity,
+        lowStockThreshold: snack.lowStockThreshold,
+        status: (snack.quantity === 0 ? 'gone' : 'low') as 'gone' | 'low',
+        suggestedRestock: {
+          amount,
+          target,
+        },
+      };
+    });
 
     // Format recentActivity
     const recentActivity = recentActivityRows.map((act) => ({
@@ -178,6 +187,10 @@ export class AdminDashboardService {
       units: consumptionMap.get(date) ?? 0,
     }));
 
+    // Calculate consumptionAverage (daily average across 7 days)
+    const totalConsumptionUnits = consumptionLast7Days.reduce((acc, curr) => acc + curr.units, 0);
+    const consumptionAverage = Math.round((totalConsumptionUnits / 7) * 10) / 10;
+
     // Format mostConsumedThisWeek
     const mostConsumedThisWeek = mostConsumedRows.map((snack) => ({
       id: snack.id,
@@ -186,13 +199,38 @@ export class AdminDashboardService {
       units: snack.units,
     }));
 
+    // Query unitsConsumedThisWeek for snackOfTheWeek if present
+    let unitsConsumedThisWeek = 0;
+    const rawSotw = snackSummary.snackOfTheWeek;
+    if (rawSotw?.id) {
+      const unitsRow = await prisma.$queryRaw<Array<{ units: number }>>`
+        SELECT COALESCE(SUM(a."amount"), 0)::int as "units"
+        FROM "Activity" a
+        WHERE a."snackId" = ${rawSotw.id}
+          AND a."action" = 'CONSUMED'
+          AND a."createdAt" >= ${startDate}
+      `;
+      unitsConsumedThisWeek = unitsRow[0]?.units ?? 0;
+    }
+
+    const snackOfTheWeek = rawSotw
+      ? {
+          ...rawSotw,
+          quantity: rawSotw.quantity,
+          lowStockThreshold: rawSotw.lowStockThreshold,
+          status: rawSotw.status || (rawSotw.quantity === 0 ? 'gone' : rawSotw.quantity <= rawSotw.lowStockThreshold ? 'low' : 'stocked'),
+          unitsConsumedThisWeek,
+        }
+      : null;
+
     return {
       counts,
       needsRestock,
       recentActivity,
       consumptionLast7Days,
+      consumptionAverage,
       mostConsumedThisWeek,
-      snackOfTheWeek: snackSummary.snackOfTheWeek ?? null,
+      snackOfTheWeek,
     };
   }
 }

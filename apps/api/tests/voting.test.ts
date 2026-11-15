@@ -187,6 +187,10 @@ describe('Voting & Admin Snack Management (Phase 5)', () => {
       });
       expect(activity).toBeDefined();
       expect(activity?.amount).toBe(10);
+
+      // Clean up test snack so it never pollutes the dev inventory
+      await prisma.activity.deleteMany({ where: { snackId: snack!.id } });
+      await prisma.snack.delete({ where: { id: snack!.id } });
     });
 
     it('rejects duplicate snack name with 409', async () => {

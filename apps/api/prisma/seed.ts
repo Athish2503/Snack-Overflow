@@ -112,10 +112,10 @@ async function main() {
       quantity: 15,
       lowStockThreshold: 5,
       calories: 190,
-      imageUrl: 'https://images.unsplash.com/photo-1622484214532-6804bbad938f?auto=format&fit=crop&w=600&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=600&q=80',
       images: [
-        'https://images.unsplash.com/photo-1622484214532-6804bbad938f?auto=format&fit=crop&w=600&q=80',
         'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=600&q=80',
+        'https://images.unsplash.com/photo-1606149059549-6042addafc58?auto=format&fit=crop&w=600&q=80',
       ],
     },
     {

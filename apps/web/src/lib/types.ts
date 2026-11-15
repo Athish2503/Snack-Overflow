@@ -111,6 +111,10 @@ export interface AdminNeedsRestockItem {
   quantity: number;
   lowStockThreshold: number;
   status: 'gone' | 'low';
+  suggestedRestock: {
+    amount: number;
+    target: number;
+  };
 }
 
 export interface AdminRecentActivityItem {
@@ -139,7 +143,8 @@ export interface AdminDashboardResponse {
   needsRestock: AdminNeedsRestockItem[];
   recentActivity: AdminRecentActivityItem[];
   consumptionLast7Days: AdminConsumptionDay[];
+  consumptionAverage: number;
   mostConsumedThisWeek: AdminMostConsumedItem[];
-  snackOfTheWeek: Snack | null;
+  snackOfTheWeek: (Snack & { unitsConsumedThisWeek?: number }) | null;
 }
 

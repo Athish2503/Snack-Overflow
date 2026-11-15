@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { prisma } from '../src/config/database.js';
@@ -10,6 +10,24 @@ describe('Inventory Mutations & Concurrency Safety (Phase 4)', () => {
   let memberCookie: string;
   let adminCookie: string;
   let memberUserId: string;
+
+  afterAll(async () => {
+    const testSnacks = await prisma.snack.findMany({
+      where: {
+        OR: [
+          { name: { contains: 'Test Snack' } },
+          { name: { contains: 'Concurrency Snack' } },
+        ],
+      },
+      select: { id: true },
+    });
+    const ids = testSnacks.map((s) => s.id);
+    if (ids.length > 0) {
+      await prisma.activity.deleteMany({ where: { snackId: { in: ids } } });
+      await prisma.vote.deleteMany({ where: { snackId: { in: ids } } });
+      await prisma.snack.deleteMany({ where: { id: { in: ids } } });
+    }
+  });
 
   beforeAll(async () => {
     // 1. Login member

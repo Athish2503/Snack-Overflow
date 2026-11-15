@@ -1,12 +1,14 @@
 'use client';
 
-import React from 'react';
-import { AlertCircle, CheckCircle2, ArrowDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { AlertCircle, CheckCircle2, ArrowDown, Plus } from 'lucide-react';
 
 interface AdminControlHeaderProps {
   adminName: string;
   goneCount: number;
   lowCount: number;
+  dataUpdatedAt?: number;
+  onAddSnackClick: () => void;
 }
 
 function getGreeting(): string {
@@ -20,7 +22,22 @@ export function AdminControlHeader({
   adminName,
   goneCount,
   lowCount,
+  dataUpdatedAt,
+  onAddSnackClick,
 }: AdminControlHeaderProps) {
+  const [secondsAgo, setSecondsAgo] = useState(0);
+
+  useEffect(() => {
+    if (!dataUpdatedAt) return;
+    const calculateSeconds = () => {
+      const diff = Math.max(0, Math.floor((Date.now() - dataUpdatedAt) / 1000));
+      setSecondsAgo(diff);
+    };
+    calculateSeconds();
+    const interval = setInterval(calculateSeconds, 1000);
+    return () => clearInterval(interval);
+  }, [dataUpdatedAt]);
+
   const needsAttention = goneCount > 0 || lowCount > 0;
 
   const scrollToNeedsRestock = () => {
@@ -69,64 +86,94 @@ export function AdminControlHeader({
           <p
             style={{
               margin: 0,
-              fontSize: 15,
-              fontWeight: 600,
+              fontSize: 14,
+              fontWeight: 700,
               color: 'var(--ink-muted)',
+              fontFamily: 'var(--font-jetbrains-mono), monospace',
             }}
           >
-            Pantry Control Room &mdash; Live telemetry, stock monitoring, and restock actions.
+            Updated {secondsAgo}s ago
           </p>
         </div>
 
-        {/* Telemetry pill */}
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 16px',
-            borderRadius: 'var(--radius-lg)',
-            border: '2px solid var(--ink)',
-            boxShadow: '3px 3px 0 var(--ink)',
-            background: needsAttention ? 'var(--gone-soft)' : 'var(--stocked-soft)',
-            color: needsAttention ? 'var(--gone-ink)' : 'var(--stocked-ink)',
-            fontSize: 13,
-            fontWeight: 800,
-          }}
-        >
-          {needsAttention ? (
-            <>
-              <AlertCircle size={18} strokeWidth={2.8} />
-              <span>{alertText}</span>
-              <button
-                type="button"
-                onClick={scrollToNeedsRestock}
-                className="sticker focus-ring"
-                style={{
-                  padding: '4px 10px',
-                  fontSize: 12,
-                  fontWeight: 900,
-                  background: 'var(--primary)',
-                  color: 'var(--ink)',
-                  cursor: 'pointer',
-                  borderRadius: 'var(--radius-sm)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  minHeight: 32,
-                  marginLeft: 4,
-                }}
-              >
-                Restock now
-                <ArrowDown size={14} strokeWidth={3} />
-              </button>
-            </>
-          ) : (
-            <>
-              <CheckCircle2 size={18} strokeWidth={2.8} />
-              <span>All items stocked and healthy</span>
-            </>
-          )}
+        {/* Right Header Actions: Alert Banner + Primary + Add snack Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          {/* Alert banner / Telemetry pill */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 16px',
+              borderRadius: 'var(--radius-lg)',
+              border: '2px solid var(--ink)',
+              boxShadow: '3px 3px 0 var(--ink)',
+              background: needsAttention ? 'var(--gone-soft)' : 'var(--stocked-soft)',
+              color: needsAttention ? 'var(--gone-ink)' : 'var(--stocked-ink)',
+              fontSize: 13,
+              fontWeight: 800,
+              minHeight: 44,
+            }}
+          >
+            {needsAttention ? (
+              <>
+                <AlertCircle size={18} strokeWidth={2.8} />
+                <span>{alertText}</span>
+                <button
+                  type="button"
+                  onClick={scrollToNeedsRestock}
+                  className="sticker focus-ring"
+                  style={{
+                    padding: '4px 12px',
+                    fontSize: 12,
+                    fontWeight: 900,
+                    background: 'var(--primary)',
+                    color: 'var(--ink)',
+                    cursor: 'pointer',
+                    borderRadius: 'var(--radius-sm)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    minHeight: 32,
+                    marginLeft: 4,
+                  }}
+                >
+                  Restock now
+                  <ArrowDown size={14} strokeWidth={3} />
+                </button>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={18} strokeWidth={2.8} />
+                <span>All items stocked</span>
+              </>
+            )}
+          </div>
+
+          {/* Primary + Add snack Button */}
+          <button
+            type="button"
+            onClick={onAddSnackClick}
+            className="sticker focus-ring"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              background: 'var(--primary)',
+              color: 'var(--ink)',
+              border: '2px solid var(--ink)',
+              boxShadow: '3.5px 3.5px 0 var(--ink)',
+              borderRadius: 'var(--radius-md)',
+              padding: '10px 18px',
+              fontSize: 14,
+              fontWeight: 900,
+              cursor: 'pointer',
+              minHeight: 44,
+            }}
+          >
+            <Plus size={18} strokeWidth={3} />
+            <span>+ Add snack</span>
+          </button>
         </div>
       </div>
     </div>

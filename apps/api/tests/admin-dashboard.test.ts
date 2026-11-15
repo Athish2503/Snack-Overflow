@@ -41,7 +41,7 @@ describe('Admin Dashboard API (GET /api/admin/dashboard)', () => {
     expect(res.body.error.message).toBeDefined();
   });
 
-  it('allows admin requests with 200 and returns the exact dashboard structure', async () => {
+  it('allows admin requests with 200 and returns the exact dashboard structure with smart restock and average', async () => {
     const loginRes = await request(app).post('/api/auth/login').send({
       email: 'admin@snackoverflow.local',
       password: 'admin123',
@@ -64,7 +64,7 @@ describe('Admin Dashboard API (GET /api/admin/dashboard)', () => {
     expect(typeof body.counts.gone).toBe('number');
     expect(body.counts.total).toBe(body.counts.stocked + body.counts.low + body.counts.gone);
 
-    // 2. NeedsRestock validation
+    // 2. NeedsRestock validation with suggestedRestock
     expect(Array.isArray(body.needsRestock)).toBe(true);
     expect(body.needsRestock.length).toBeLessThanOrEqual(8);
     for (const item of body.needsRestock) {
@@ -80,6 +80,12 @@ describe('Admin Dashboard API (GET /api/admin/dashboard)', () => {
         expect(item.status).toBe('low');
         expect(item.quantity).toBeLessThanOrEqual(item.lowStockThreshold);
       }
+
+      // Check smart suggestedRestock math: X = max(1, 2*threshold - quantity), Y = quantity + X
+      expect(item.suggestedRestock).toBeDefined();
+      const expectedAmount = Math.max(1, 2 * item.lowStockThreshold - item.quantity);
+      expect(item.suggestedRestock.amount).toBe(expectedAmount);
+      expect(item.suggestedRestock.target).toBe(item.quantity + expectedAmount);
     }
 
     // 3. Urgency ordering verification: 'gone' items must come before 'low' items
@@ -105,7 +111,7 @@ describe('Admin Dashboard API (GET /api/admin/dashboard)', () => {
       expect(act.createdAt).toBeDefined();
     }
 
-    // 5. ConsumptionLast7Days validation: exactly 7 days
+    // 5. ConsumptionLast7Days & consumptionAverage validation
     expect(Array.isArray(body.consumptionLast7Days)).toBe(true);
     expect(body.consumptionLast7Days.length).toBe(7);
     for (const day of body.consumptionLast7Days) {
@@ -118,6 +124,9 @@ describe('Admin Dashboard API (GET /api/admin/dashboard)', () => {
       expect(body.consumptionLast7Days[i].date > body.consumptionLast7Days[i - 1].date).toBe(true);
     }
 
+    expect(typeof body.consumptionAverage).toBe('number');
+    expect(body.consumptionAverage).toBeGreaterThanOrEqual(0);
+
     // 6. MostConsumedThisWeek validation (up to 3)
     expect(Array.isArray(body.mostConsumedThisWeek)).toBe(true);
     expect(body.mostConsumedThisWeek.length).toBeLessThanOrEqual(3);
@@ -127,10 +136,59 @@ describe('Admin Dashboard API (GET /api/admin/dashboard)', () => {
       expect(typeof snack.units).toBe('number');
     }
 
-    // 7. Snack of the week validation
+    // 7. Snack of the week validation including stock fields and unitsConsumedThisWeek
     if (body.snackOfTheWeek) {
       expect(body.snackOfTheWeek.id).toBeDefined();
       expect(body.snackOfTheWeek.name).toBeDefined();
+      expect(typeof body.snackOfTheWeek.quantity).toBe('number');
+      expect(typeof body.snackOfTheWeek.lowStockThreshold).toBe('number');
+      expect(body.snackOfTheWeek.status).toBeDefined();
+      expect(typeof body.snackOfTheWeek.unitsConsumedThisWeek).toBe('number');
+    }
+  });
+
+  it('correctly computes suggestedRestock math for gone snacks and threshold edge cases', async () => {
+    // 1. Create a gone snack (quantity: 0, threshold: 4) -> suggestedRestock: amount = max(1, 2*4 - 0) = 8, target = 8
+    const goneSnack = await prisma.snack.create({
+      data: {
+        name: `TEST_GONE_RESTOCK_MATH_${Date.now()}`,
+        category: SnackCategory.SWEET,
+        quantity: 0,
+        lowStockThreshold: 4,
+      },
+    });
+
+    // 2. Create a low snack where quantity = threshold (quantity: 3, threshold: 3) -> amount = max(1, 2*3 - 3) = 3, target = 6
+    const lowSnack = await prisma.snack.create({
+      data: {
+        name: `TEST_LOW_RESTOCK_MATH_${Date.now()}`,
+        category: SnackCategory.SAVOURY,
+        quantity: 3,
+        lowStockThreshold: 3,
+      },
+    });
+
+    try {
+      const res = await request(app)
+        .get('/api/admin/dashboard')
+        .set('Cookie', adminCookie);
+
+      expect(res.status).toBe(200);
+
+      const foundGone = res.body.needsRestock.find((s: any) => s.id === goneSnack.id);
+      expect(foundGone).toBeDefined();
+      expect(foundGone.suggestedRestock.amount).toBe(8);
+      expect(foundGone.suggestedRestock.target).toBe(8);
+
+      const foundLow = res.body.needsRestock.find((s: any) => s.id === lowSnack.id);
+      if (foundLow) {
+        expect(foundLow.suggestedRestock.amount).toBe(3);
+        expect(foundLow.suggestedRestock.target).toBe(6);
+      }
+    } finally {
+      await prisma.snack.deleteMany({
+        where: { id: { in: [goneSnack.id, lowSnack.id] } },
+      });
     }
   });
 
