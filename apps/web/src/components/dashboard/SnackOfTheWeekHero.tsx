@@ -417,7 +417,6 @@ export function SnackOfTheWeekHero({
                 }}
               >
                 {optimisticVote.voteCount} {optimisticVote.voteCount === 1 ? 'vote' : 'votes'}
-                {variant === 'admin' ? ' this week' : ''}
               </span>
 
               {/* Calories Chip */}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { AlertCircle, CheckCircle2, ArrowDown, Plus } from 'lucide-react';
 
 interface AdminControlHeaderProps {
@@ -22,22 +22,8 @@ export function AdminControlHeader({
   adminName,
   goneCount,
   lowCount,
-  dataUpdatedAt,
   onAddSnackClick,
 }: AdminControlHeaderProps) {
-  const [secondsAgo, setSecondsAgo] = useState(0);
-
-  useEffect(() => {
-    if (!dataUpdatedAt) return;
-    const calculateSeconds = () => {
-      const diff = Math.max(0, Math.floor((Date.now() - dataUpdatedAt) / 1000));
-      setSecondsAgo(diff);
-    };
-    calculateSeconds();
-    const interval = setInterval(calculateSeconds, 1000);
-    return () => clearInterval(interval);
-  }, [dataUpdatedAt]);
-
   const needsAttention = goneCount > 0 || lowCount > 0;
 
   const scrollToNeedsRestock = () => {
@@ -92,7 +78,7 @@ export function AdminControlHeader({
               fontFamily: 'var(--font-jetbrains-mono), monospace',
             }}
           >
-            Updated {secondsAgo}s ago
+            Pantry Control Room • Live Overview
           </p>
         </div>
 

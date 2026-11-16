@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { BentoTile } from './BentoTile';
 import { useEvents } from '@/contexts/EventsContext';
@@ -41,20 +41,8 @@ export function LiveActivityTile({
   isError,
   onRetry,
   staggerIndex = 2,
-  dataUpdatedAt,
 }: LiveActivityTileProps) {
   const { isConnected } = useEvents();
-  const [secondsAgo, setSecondsAgo] = useState(0);
-
-  useEffect(() => {
-    if (!dataUpdatedAt) return;
-    const updateSec = () => {
-      setSecondsAgo(Math.max(0, Math.floor((Date.now() - dataUpdatedAt) / 1000)));
-    };
-    updateSec();
-    const interval = setInterval(updateSec, 1000);
-    return () => clearInterval(interval);
-  }, [dataUpdatedAt]);
 
   // Top 5 items, no inner scrollbar
   const top5Activities = activities.slice(0, 5);
@@ -72,8 +60,8 @@ export function LiveActivityTile({
             fontWeight: 800,
             color: 'var(--stocked)',
           }}
-          title={`Updated ${secondsAgo}s ago`}
-          aria-label={`Live telemetry. Updated ${secondsAgo} seconds ago`}
+          title={isConnected ? 'Live real-time feed connected' : 'Connecting to live telemetry...'}
+          aria-label={isConnected ? 'Live real-time telemetry active' : 'Connecting to live telemetry'}
         >
           <span
             style={{

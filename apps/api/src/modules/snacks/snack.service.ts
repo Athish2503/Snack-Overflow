@@ -278,49 +278,55 @@ export class SnackService {
       LEFT JOIN "Vote" v ON v."snackId" = s."id"
       WHERE s."archivedAt" IS NULL
       GROUP BY s."id", s."name", s."category", s."quantity", s."lowStockThreshold", s."calories", s."imageUrl", s."images", s."createdAt", s."updatedAt"
-      HAVING COUNT(v."id") FILTER (WHERE v."createdAt" >= ${weekStart}) > 0
-      ORDER BY "weeklyVotes" DESC, "lifetimeVotes" DESC, s."name" ASC
+      HAVING COUNT(v."id") > 0
+      ORDER BY "weeklyVotes" DESC, "lifetimeVotes" DESC, s."quantity" DESC, s."name" ASC
       LIMIT 1
     `;
 
     let snackOfTheWeek: FormattedSnack | null = null;
-    if (topSnack.length > 0 && Number(topSnack[0].weeklyVotes) > 0) {
+    if (topSnack.length > 0) {
       const top = topSnack[0];
-      const rawImages = Array.isArray(top.images) ? top.images : [];
-      const images = rawImages.length > 0 ? rawImages : (top.imageUrl ? [top.imageUrl] : []);
-      const imageUrl = top.imageUrl || (images.length > 0 ? images[0] : null);
+      const weekly = Number(top.weeklyVotes);
+      const lifetime = Number(top.lifetimeVotes);
+      const effectiveVotes = weekly > 0 ? weekly : lifetime;
 
-      let hasVoted = false;
-      let isFavorite = false;
-      if (currentUserId) {
-        const [userVote, userFav] = await Promise.all([
-          prisma.vote.findUnique({
-            where: { userId_snackId: { userId: currentUserId, snackId: top.id } },
-          }),
-          prisma.favorite.findUnique({
-            where: { userId_snackId: { userId: currentUserId, snackId: top.id } },
-          }),
-        ]);
-        hasVoted = Boolean(userVote);
-        isFavorite = Boolean(userFav);
+      if (effectiveVotes > 0) {
+        const rawImages = Array.isArray(top.images) ? top.images : [];
+        const images = rawImages.length > 0 ? rawImages : (top.imageUrl ? [top.imageUrl] : []);
+        const imageUrl = top.imageUrl || (images.length > 0 ? images[0] : null);
+
+        let hasVoted = false;
+        let isFavorite = false;
+        if (currentUserId) {
+          const [userVote, userFav] = await Promise.all([
+            prisma.vote.findUnique({
+              where: { userId_snackId: { userId: currentUserId, snackId: top.id } },
+            }),
+            prisma.favorite.findUnique({
+              where: { userId_snackId: { userId: currentUserId, snackId: top.id } },
+            }),
+          ]);
+          hasVoted = Boolean(userVote);
+          isFavorite = Boolean(userFav);
+        }
+
+        snackOfTheWeek = {
+          id: top.id,
+          name: top.name,
+          category: top.category,
+          quantity: top.quantity,
+          lowStockThreshold: top.lowStockThreshold,
+          calories: top.calories,
+          imageUrl,
+          images,
+          status: getSnackStatus(top.quantity, top.lowStockThreshold),
+          voteCount: effectiveVotes,
+          hasVoted,
+          isFavorite,
+          createdAt: top.createdAt,
+          updatedAt: top.updatedAt,
+        };
       }
-
-      snackOfTheWeek = {
-        id: top.id,
-        name: top.name,
-        category: top.category,
-        quantity: top.quantity,
-        lowStockThreshold: top.lowStockThreshold,
-        calories: top.calories,
-        imageUrl,
-        images,
-        status: getSnackStatus(top.quantity, top.lowStockThreshold),
-        voteCount: Number(top.weeklyVotes),
-        hasVoted,
-        isFavorite,
-        createdAt: top.createdAt,
-        updatedAt: top.updatedAt,
-      };
     }
 
     return {

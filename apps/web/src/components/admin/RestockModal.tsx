@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Minus, Plus, ShoppingCart, AlertTriangle, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Minus, Plus, ShoppingCart, AlertTriangle, Search, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Dialog } from '@/components/ui/Dialog';
@@ -20,6 +20,7 @@ interface RestockModalProps {
 export function RestockModal({ isOpen, onClose, snack: initialSnack, onUpdated }: RestockModalProps) {
   const queryClient = useQueryClient();
   const [overrideSnackId, setOverrideSnackId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [amount, setAmount] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState('');
@@ -33,12 +34,30 @@ export function RestockModal({ isOpen, onClose, snack: initialSnack, onUpdated }
 
   const allSnacks = allSnacksData?.data || [];
 
+  useEffect(() => {
+    if (initialSnack?.id) {
+      setOverrideSnackId(initialSnack.id);
+    }
+  }, [initialSnack?.id]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSearchQuery('');
+    }
+  }, [isOpen]);
+
   const currentSnackId = overrideSnackId || initialSnack?.id || (allSnacks.length > 0 ? allSnacks[0].id : '');
 
   const currentSnack =
     allSnacks.find((s) => s.id === currentSnackId) ||
     initialSnack ||
     (allSnacks.length > 0 ? allSnacks[0] : null);
+
+  const filteredSnacks = allSnacks.filter((s) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q);
+  });
 
   const projectedQuantity = currentSnack ? currentSnack.quantity + amount : amount;
 
@@ -101,56 +120,227 @@ export function RestockModal({ isOpen, onClose, snack: initialSnack, onUpdated }
           </div>
         )}
 
-        {/* Snack Picker Dropdown */}
+        {/* Search & Select Snack Combobox */}
         <div>
-          <label
-            style={{
-              display: 'block',
-              fontSize: 13,
-              fontWeight: 800,
-              color: 'var(--ink)',
-              marginBottom: 6,
-            }}
-          >
-            Select Snack
-          </label>
-          <div style={{ position: 'relative' }}>
-            <select
-              value={currentSnackId}
-              onChange={(e) => setOverrideSnackId(e.target.value)}
-              className="sticker focus-ring"
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <label
               style={{
-                width: '100%',
-                appearance: 'none',
-                background: 'var(--surface)',
-                border: '2px solid var(--ink)',
-                borderRadius: 'var(--radius-sm)',
-                boxShadow: 'var(--shadow)',
-                padding: '10px 36px 10px 14px',
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: 800,
                 color: 'var(--ink)',
-                cursor: 'pointer',
-                minHeight: 44,
               }}
             >
-              {allSnacks.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.quantity} left)
-                </option>
-              ))}
-            </select>
-            <ChevronDown
+              Select Snack
+            </label>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: 'var(--ink-muted)',
+                fontFamily: 'var(--font-jetbrains-mono), monospace',
+              }}
+            >
+              {filteredSnacks.length} of {allSnacks.length} snacks
+            </span>
+          </div>
+
+          {/* Search Box */}
+          <div style={{ position: 'relative', marginBottom: 8 }}>
+            <Search
               size={16}
               style={{
                 position: 'absolute',
-                right: 12,
+                left: 12,
                 top: '50%',
                 transform: 'translateY(-50%)',
+                color: 'var(--ink-muted)',
                 pointerEvents: 'none',
-                color: 'var(--ink)',
               }}
             />
+            <input
+              type="text"
+              placeholder="Search by snack name or category..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="focus-ring"
+              style={{
+                width: '100%',
+                background: 'var(--surface)',
+                border: '2px solid var(--ink)',
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: '2px 2px 0 var(--ink)',
+                padding: '9px 36px 9px 36px',
+                fontSize: 13,
+                fontWeight: 600,
+                color: 'var(--ink)',
+                outline: 'none',
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                style={{
+                  position: 'absolute',
+                  right: 10,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'var(--ink-muted)',
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Scrollable Snack Select List */}
+          <div
+            role="listbox"
+            aria-label="Snack selection list"
+            style={{
+              maxHeight: 180,
+              overflowY: 'auto',
+              border: '2px solid var(--ink)',
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--surface)',
+              boxShadow: 'var(--shadow)',
+              padding: 4,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 3,
+            }}
+          >
+            {filteredSnacks.length === 0 ? (
+              <div
+                style={{
+                  padding: '24px 16px',
+                  textAlign: 'center',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: 'var(--ink-muted)',
+                }}
+              >
+                No snacks matching &ldquo;{searchQuery}&rdquo;
+              </div>
+            ) : (
+              filteredSnacks.map((s) => {
+                const isSelected = s.id === currentSnackId;
+                const isGone = s.quantity === 0;
+                const isLow = !isGone && s.quantity <= s.lowStockThreshold;
+
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => {
+                      setOverrideSnackId(s.id);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 10,
+                      padding: '8px 10px',
+                      borderRadius: 'calc(var(--radius-sm) - 2px)',
+                      background: isSelected ? 'var(--primary-soft)' : 'transparent',
+                      border: isSelected ? '2px solid var(--primary)' : '1px solid transparent',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      width: '100%',
+                      transition: 'background 120ms ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) e.currentTarget.style.background = 'var(--surface-2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 6,
+                          background: 'var(--surface-2)',
+                          border: '1px solid var(--ink)',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <SnackImage
+                          src={s.imageUrl}
+                          alt={s.name}
+                          category={s.category}
+                          width="100%"
+                          height="100%"
+                          iconSize={16}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 800,
+                            color: 'var(--ink)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {s.name}
+                        </div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)' }}>
+                          {s.category}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <span
+                        style={{
+                          fontFamily: 'var(--font-jetbrains-mono), monospace',
+                          fontSize: 11,
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: 100,
+                          background: isGone ? '#FFD9D9' : isLow ? '#FFF0B8' : '#D1FADF',
+                          color: isGone ? 'var(--bad)' : isLow ? '#8A5D00' : 'var(--ok)',
+                          border: '1px solid var(--ink)',
+                        }}
+                      >
+                        {s.quantity} left
+                      </span>
+                      {isSelected && (
+                        <div
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: '50%',
+                            background: 'var(--primary)',
+                            color: 'var(--ink)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Check size={12} strokeWidth={3} />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
 

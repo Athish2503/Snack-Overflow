@@ -156,12 +156,11 @@ export function AdminControlRoom() {
         }
       `}</style>
 
-      {/* Top Greeting, Alert Banner, + Add snack button, and Updated Ns ago */}
+      {/* Top Greeting, Alert Banner, + Add snack button */}
       <AdminControlHeader
         adminName={adminName}
         goneCount={counts.gone}
         lowCount={counts.low}
-        dataUpdatedAt={dataUpdatedAt}
         onAddSnackClick={() => setIsAddSnackOpen(true)}
       />
 
@@ -207,7 +206,6 @@ export function AdminControlRoom() {
             isError={isError}
             onRetry={() => refetch()}
             staggerIndex={2}
-            dataUpdatedAt={dataUpdatedAt}
           />
         </div>
 

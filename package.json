@@ -20,8 +20,10 @@
     "type-check": "npm run --workspaces --if-present type-check",
     "db:migrate": "npm --workspace=apps/api run prisma:migrate",
     "db:migrate:deploy": "npm --workspace=apps/api run prisma:migrate:deploy",
+    "db:push": "npm --workspace=apps/api run prisma:db:push",
     "db:seed": "npm --workspace=apps/api run prisma:seed",
     "prisma:migrate": "npm --workspace=apps/api run prisma:migrate",
+    "prisma:push": "npm --workspace=apps/api run prisma:db:push",
     "prisma:seed": "npm --workspace=apps/api run prisma:seed"
   },
   "devDependencies": {
