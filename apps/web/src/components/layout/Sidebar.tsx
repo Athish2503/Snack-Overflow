@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Cookie, TrendingUp, Package, ShoppingBag, Bookmark } from 'lucide-react';
+import { Home, Cookie, TrendingUp, ShoppingBag, Bookmark } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';

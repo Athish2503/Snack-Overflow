@@ -25,7 +25,6 @@ export function AdminControlRoom() {
     isLoading,
     isError,
     refetch,
-    dataUpdatedAt,
   } = useQuery<AdminDashboardResponse>({
     queryKey: ['admin-dashboard'],
     queryFn: () => api.get<AdminDashboardResponse>('/admin/dashboard'),

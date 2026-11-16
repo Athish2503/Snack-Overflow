@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Minus, Plus, ShoppingCart, AlertTriangle, Search, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
@@ -34,17 +34,12 @@ export function RestockModal({ isOpen, onClose, snack: initialSnack, onUpdated }
 
   const allSnacks = allSnacksData?.data || [];
 
-  useEffect(() => {
-    if (initialSnack?.id) {
-      setOverrideSnackId(initialSnack.id);
-    }
-  }, [initialSnack?.id]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setSearchQuery('');
-    }
-  }, [isOpen]);
+  const handleClose = () => {
+    setOverrideSnackId(null);
+    setSearchQuery('');
+    setServerError('');
+    onClose();
+  };
 
   const currentSnackId = overrideSnackId || initialSnack?.id || (allSnacks.length > 0 ? allSnacks[0].id : '');
 
@@ -75,7 +70,7 @@ export function RestockModal({ isOpen, onClose, snack: initialSnack, onUpdated }
       queryClient.invalidateQueries({ queryKey: ['snack-summary'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
       onUpdated?.();
-      onClose();
+      handleClose();
     } catch (err) {
       if (err instanceof ApiError) {
         setServerError(err.message);
@@ -92,7 +87,7 @@ export function RestockModal({ isOpen, onClose, snack: initialSnack, onUpdated }
   return (
     <Dialog
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Restock Inventory"
       description={currentSnack ? `Add stock to ${currentSnack.name}` : 'Select a snack to restock'}
       maxWidth={460}
@@ -529,7 +524,7 @@ export function RestockModal({ isOpen, onClose, snack: initialSnack, onUpdated }
             type="button"
             variant="ghost"
             size="md"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={isLoading}
             style={{ flex: 1 }}
           >
