@@ -136,14 +136,14 @@ export function QuickActionsTile({
             <span>Activity Log</span>
           </Link>
 
-          {/* All / Archived Snacks */}
+          {/* Archived Snacks */}
           <Link
-            href="/snacks"
+            href="/snacks?status=archived"
             className="quick-action-btn focus-ring"
             style={{ background: 'var(--surface-2)', color: 'var(--ink)' }}
           >
             <Archive size={18} strokeWidth={2.6} />
-            <span>All Snacks</span>
+            <span>Archived Snacks</span>
           </Link>
         </div>
       </BentoTile>

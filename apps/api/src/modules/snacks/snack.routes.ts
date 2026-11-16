@@ -31,10 +31,11 @@ router.post(
 router.get('/', authenticate, validateQuery(snackQuerySchema), asyncHandler(SnackController.getSnacks));
 router.post('/', authenticate, requireAdmin, validate(createSnackSchema), asyncHandler(SnackController.createSnack));
 
-// Single Snack Details, Update, Delete
+// Single Snack Details, Update, Delete, Restore
 router.get('/:id', authenticate, asyncHandler(SnackController.getSnackById));
 router.patch('/:id', authenticate, requireAdmin, validate(updateSnackSchema), asyncHandler(SnackController.updateSnack));
 router.delete('/:id', authenticate, requireAdmin, asyncHandler(SnackController.deleteSnack));
+router.post('/:id/restore', authenticate, requireAdmin, asyncHandler(SnackController.restoreSnack));
 
 // Inventory mutations
 router.post(

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, ThumbsUp, Bookmark, Minus, Plus, ShoppingBag, ShoppingCart, Pencil, Trash2, Flame } from 'lucide-react';
+import { X, ThumbsUp, Bookmark, Minus, Plus, ShoppingBag, ShoppingCart, Pencil, Trash2, Flame, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,11 +38,33 @@ export function SnackDetailDrawer({
   const [isConsuming, setIsConsuming] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
   const [isFavoriting, setIsFavoriting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   // Admin modal controls
   const [showRestock, setShowRestock] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+
+  async function handleRestoreFromDrawer() {
+    if (isRestoring || !snack) return;
+    setIsRestoring(true);
+    try {
+      await api.post(`/snacks/${snack.id}/restore`);
+      toast.success(`Restored "${snack.name}" to the pantry!`);
+      queryClient.invalidateQueries({ queryKey: ['snacks'] });
+      queryClient.invalidateQueries({ queryKey: ['snack-summary'] });
+      onUpdated?.();
+      onClose();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message);
+      } else {
+        toast.error('Failed to restore snack.');
+      }
+    } finally {
+      setIsRestoring(false);
+    }
+  }
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -63,6 +85,7 @@ export function SnackDetailDrawer({
   if (!isOpen || !snack) return null;
 
   const inCartQty = getItemQuantity(snack.id);
+  const isArchived = snack.status === 'archived' || Boolean(snack.archivedAt);
   const isGone = snack.quantity <= 0;
   const isRunningLow = snack.status === 'running_low';
   const categoryMeta = CATEGORIES[snack.category] ?? CATEGORIES.SWEET;
@@ -405,152 +428,169 @@ export function SnackDetailDrawer({
               Consume
             </span>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {/* Stepper */}
+            {isArchived ? (
               <div
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  background: 'var(--surface-2)',
-                  border: '2.5px solid var(--ink)',
+                  padding: '16px',
                   borderRadius: 'var(--radius-sm)',
-                  height: 48,
-                  overflow: 'hidden',
-                  width: 140,
+                  background: 'var(--surface-2)',
+                  border: '2px dashed var(--ink)',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: 'var(--ink-muted)',
+                  textAlign: 'center',
                 }}
               >
+                📦 This snack is archived from the active pantry.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {/* Stepper */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: 'var(--surface-2)',
+                    border: '2.5px solid var(--ink)',
+                    borderRadius: 'var(--radius-sm)',
+                    height: 48,
+                    overflow: 'hidden',
+                    width: 140,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setAmount((a) => Math.max(1, a - 1))}
+                    disabled={amount <= 1 || isConsuming}
+                    aria-label="Decrease amount"
+                    className="focus-ring"
+                    style={{
+                      width: 44,
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'none',
+                      border: 'none',
+                      cursor: amount <= 1 ? 'not-allowed' : 'pointer',
+                      opacity: amount <= 1 ? 0.4 : 1,
+                    }}
+                  >
+                    <Minus size={16} />
+                  </button>
+
+                  <input
+                    type="number"
+                    min={1}
+                    max={snack.quantity}
+                    value={amount}
+                    onChange={(e) => setAmount(parseInt(e.target.value, 10) || 1)}
+                    disabled={isConsuming}
+                    aria-label="Consume amount"
+                    style={{
+                      flex: 1,
+                      textAlign: 'center',
+                      background: 'transparent',
+                      border: 'none',
+                      fontFamily: 'var(--font-jetbrains-mono), monospace',
+                      fontWeight: 800,
+                      fontSize: 18,
+                      color: 'var(--ink)',
+                      outline: 'none',
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setAmount((a) => Math.min(snack.quantity, a + 1))}
+                    disabled={amount >= snack.quantity || isConsuming}
+                    aria-label="Increase amount"
+                    className="focus-ring"
+                    style={{
+                      width: 44,
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'none',
+                      border: 'none',
+                      cursor: amount >= snack.quantity ? 'not-allowed' : 'pointer',
+                      opacity: amount >= snack.quantity ? 0.4 : 1,
+                    }}
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+
+                {/* Add to Bag Button */}
                 <button
                   type="button"
-                  onClick={() => setAmount((a) => Math.max(1, a - 1))}
-                  disabled={amount <= 1 || isConsuming}
-                  aria-label="Decrease amount"
-                  className="focus-ring"
+                  onClick={handleAddToCart}
+                  disabled={isConsuming || isGone || inCartQty >= snack.quantity}
+                  className="sticker focus-ring"
                   style={{
-                    width: 44,
-                    height: '100%',
+                    height: 48,
+                    padding: '0 16px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: inCartQty > 0 ? 'var(--primary-soft)' : 'var(--surface-2)',
+                    color: 'var(--ink)',
+                    border: '2.5px solid var(--ink)',
+                    boxShadow: 'var(--shadow)',
+                    fontSize: 14,
+                    fontWeight: 900,
+                    fontFamily: 'var(--font-bricolage), sans-serif',
+                    cursor: isGone || inCartQty >= snack.quantity ? 'not-allowed' : 'pointer',
+                    opacity: isGone || inCartQty >= snack.quantity ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'none',
-                    border: 'none',
-                    cursor: amount <= 1 ? 'not-allowed' : 'pointer',
-                    opacity: amount <= 1 ? 0.4 : 1,
+                    gap: 6,
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  <Minus size={16} />
+                  <ShoppingBag size={18} strokeWidth={2.4} />
+                  <span>{inCartQty > 0 ? `In Bag (${inCartQty})` : 'Add to Bag'}</span>
                 </button>
 
-                <input
-                  type="number"
-                  min={1}
-                  max={snack.quantity}
-                  value={amount}
-                  onChange={(e) => setAmount(parseInt(e.target.value, 10) || 1)}
-                  disabled={isConsuming}
-                  aria-label="Consume amount"
+                {/* Consume Button */}
+                <button
+                  type="button"
+                  onClick={(e) => handleConsume(e)}
+                  disabled={isConsuming || isGone}
+                  className="sticker focus-ring"
                   style={{
                     flex: 1,
-                    textAlign: 'center',
-                    background: 'transparent',
-                    border: 'none',
-                    fontFamily: 'var(--font-jetbrains-mono), monospace',
-                    fontWeight: 800,
-                    fontSize: 18,
+                    height: 48,
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--primary)',
                     color: 'var(--ink)',
-                    outline: 'none',
-                  }}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setAmount((a) => Math.min(snack.quantity, a + 1))}
-                  disabled={amount >= snack.quantity || isConsuming}
-                  aria-label="Increase amount"
-                  className="focus-ring"
-                  style={{
-                    width: 44,
-                    height: '100%',
+                    border: '2.5px solid var(--ink)',
+                    boxShadow: 'var(--shadow)',
+                    fontSize: 15,
+                    fontWeight: 900,
+                    fontFamily: 'var(--font-bricolage), sans-serif',
+                    cursor: isConsuming || isGone ? 'not-allowed' : 'pointer',
+                    opacity: isGone ? 0.6 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'none',
-                    border: 'none',
-                    cursor: amount >= snack.quantity ? 'not-allowed' : 'pointer',
-                    opacity: amount >= snack.quantity ? 0.4 : 1,
+                    gap: 8,
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  <Plus size={16} />
+                  {isConsuming ? (
+                    <>
+                      <LoadingSpinner size="sm" />
+                      <span>Consuming...</span>
+                    </>
+                  ) : isGone ? (
+                    'Out of stock'
+                  ) : (
+                    'Consume'
+                  )}
                 </button>
               </div>
-
-              {/* Add to Bag Button */}
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={isConsuming || isGone || inCartQty >= snack.quantity}
-                className="sticker focus-ring"
-                style={{
-                  height: 48,
-                  padding: '0 16px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: inCartQty > 0 ? 'var(--primary-soft)' : 'var(--surface-2)',
-                  color: 'var(--ink)',
-                  border: '2.5px solid var(--ink)',
-                  boxShadow: 'var(--shadow)',
-                  fontSize: 14,
-                  fontWeight: 900,
-                  fontFamily: 'var(--font-bricolage), sans-serif',
-                  cursor: isGone || inCartQty >= snack.quantity ? 'not-allowed' : 'pointer',
-                  opacity: isGone || inCartQty >= snack.quantity ? 0.5 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <ShoppingBag size={18} strokeWidth={2.4} />
-                <span>{inCartQty > 0 ? `In Bag (${inCartQty})` : 'Add to Bag'}</span>
-              </button>
-
-              {/* Consume Button */}
-              <button
-                type="button"
-                onClick={(e) => handleConsume(e)}
-                disabled={isConsuming || isGone}
-                className="sticker focus-ring"
-                style={{
-                  flex: 1,
-                  height: 48,
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--primary)',
-                  color: 'var(--ink)',
-                  border: '2.5px solid var(--ink)',
-                  boxShadow: 'var(--shadow)',
-                  fontSize: 15,
-                  fontWeight: 900,
-                  fontFamily: 'var(--font-bricolage), sans-serif',
-                  cursor: isConsuming || isGone ? 'not-allowed' : 'pointer',
-                  opacity: isGone ? 0.6 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {isConsuming ? (
-                  <>
-                    <LoadingSpinner size="sm" />
-                    <span>Consuming...</span>
-                  </>
-                ) : isGone ? (
-                  'Out of stock'
-                ) : (
-                  'Consume'
-                )}
-              </button>
-            </div>
+            )}
 
             {/* Actions: Public Vote & Personal Bookmark (Favorites) */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -724,30 +764,57 @@ export function SnackDetailDrawer({
                   <span>Edit</span>
                 </button>
 
-                {/* Archive */}
-                <button
-                  type="button"
-                  onClick={() => setShowArchive(true)}
-                  className="sticker focus-ring"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '14px 8px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'var(--gone-soft)',
-                    border: '2px solid var(--gone)',
-                    boxShadow: '3px 3px 0 var(--gone)',
-                    color: 'var(--gone-ink)',
-                    fontSize: 13,
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Trash2 size={20} style={{ color: 'var(--gone)' }} />
-                  <span>Archive</span>
-                </button>
+                {/* Archive or Restore */}
+                {isArchived ? (
+                  <button
+                    type="button"
+                    onClick={handleRestoreFromDrawer}
+                    disabled={isRestoring}
+                    className="sticker focus-ring"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '14px 8px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--stocked-soft)',
+                      border: '2px solid var(--stocked)',
+                      boxShadow: '3px 3px 0 var(--stocked)',
+                      color: 'var(--stocked-ink)',
+                      fontSize: 13,
+                      fontWeight: 800,
+                      cursor: isRestoring ? 'wait' : 'pointer',
+                    }}
+                  >
+                    <RotateCcw size={20} style={{ color: 'var(--stocked)' }} />
+                    <span>{isRestoring ? 'Restoring...' : 'Restore'}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowArchive(true)}
+                    className="sticker focus-ring"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '14px 8px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--gone-soft)',
+                      border: '2px solid var(--gone)',
+                      boxShadow: '3px 3px 0 var(--gone)',
+                      color: 'var(--gone-ink)',
+                      fontSize: 13,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Trash2 size={20} style={{ color: 'var(--gone)' }} />
+                    <span>Archive</span>
+                  </button>
+                )}
               </div>
             </div>
           )}

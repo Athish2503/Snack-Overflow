@@ -20,7 +20,7 @@ export class SnackController {
   static async getSnackById(req: AuthRequest, res: Response) {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const currentUserId = req.user?.id;
-    const snack = await SnackService.getSnackById(id, currentUserId);
+    const snack = await SnackService.getSnackById(id, currentUserId, req.user?.role);
     res.status(200).json(snack);
   }
 
@@ -87,6 +87,15 @@ export class SnackController {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     await SnackService.deleteSnack(id);
     res.status(204).send();
+  }
+
+  static async restoreSnack(req: AuthRequest, res: Response) {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const restored = await SnackService.restoreSnack(id);
+    res.status(200).json({
+      data: restored,
+      message: 'Snack restored successfully',
+    });
   }
 
   static async voteSnack(req: AuthRequest, res: Response) {

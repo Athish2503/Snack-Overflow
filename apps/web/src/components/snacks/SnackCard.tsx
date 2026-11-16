@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ThumbsUp, Bookmark, Minus, Plus, Flame, ShoppingBag } from 'lucide-react';
+import { ThumbsUp, Bookmark, Minus, Plus, Flame, ShoppingBag, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 import { Snack } from '@/lib/types';
 import { api, ApiError } from '@/lib/api';
 import { CATEGORIES, CategoryIcon, getStockRatio } from '@/lib/snackHelpers';
@@ -20,6 +21,7 @@ interface SnackCardProps {
 }
 
 export function SnackCard({ snack, onUpdated, onSelect }: SnackCardProps) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { addToCart, updateQuantity, getItemQuantity } = useCart();
   const [amount, setAmount] = useState(1);
@@ -29,6 +31,7 @@ export function SnackCard({ snack, onUpdated, onSelect }: SnackCardProps) {
   const [heartAnim, setHeartAnim] = useState(false);
   const [isAddPressed, setIsAddPressed] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   // Local optimistic vote state (Public popularity count)
   const [localVote, setLocalVote] = useState<{ id: string; hasVoted: boolean; voteCount: number } | null>(null);
@@ -43,8 +46,30 @@ export function SnackCard({ snack, onUpdated, onSelect }: SnackCardProps) {
     ? localFav.isFavorite
     : Boolean(snack.isFavorite);
 
+  const isArchived = snack.status === 'archived' || Boolean(snack.archivedAt);
   const isGone = snack.quantity <= 0;
   const isRunningLow = snack.status === 'running_low';
+
+  async function handleRestore(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (isRestoring) return;
+    setIsRestoring(true);
+    try {
+      await api.post(`/snacks/${snack.id}/restore`);
+      toast.success(`Restored "${snack.name}" to the pantry!`);
+      queryClient.invalidateQueries({ queryKey: ['snacks'] });
+      queryClient.invalidateQueries({ queryKey: ['snack-summary'] });
+      onUpdated?.();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message);
+      } else {
+        toast.error('Failed to restore snack.');
+      }
+    } finally {
+      setIsRestoring(false);
+    }
+  }
 
   // Calculate if restocked within last 24 hours
   const isRestockedRecently = React.useState(() => {
@@ -527,7 +552,51 @@ export function SnackCard({ snack, onUpdated, onSelect }: SnackCardProps) {
 
         {/* Action Row: Row 1 (Stepper + Add to bag), Row 2 (Consume now) */}
         <div>
-          {isGone ? (
+          {isArchived ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+              <div
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--surface-2)',
+                  border: '1.5px dashed var(--ink-muted)',
+                  fontSize: 12,
+                  color: 'var(--ink-muted)',
+                  textAlign: 'center',
+                  fontWeight: 700,
+                }}
+              >
+                Archived from pantry
+              </div>
+              {user?.role === 'ADMIN' && (
+                <button
+                  type="button"
+                  onClick={handleRestore}
+                  disabled={isRestoring}
+                  className="sticker focus-ring"
+                  style={{
+                    width: '100%',
+                    height: 40,
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--stocked-soft)',
+                    border: '2px solid var(--stocked)',
+                    boxShadow: '2px 2px 0 var(--stocked)',
+                    color: 'var(--stocked-ink)',
+                    fontSize: 13,
+                    fontWeight: 800,
+                    cursor: isRestoring ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <RotateCcw size={14} />
+                  <span>{isRestoring ? 'Restoring...' : 'Restore to Pantry'}</span>
+                </button>
+              )}
+            </div>
+          ) : isGone ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <button
                 disabled

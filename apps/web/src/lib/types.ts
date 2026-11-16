@@ -13,7 +13,7 @@ export interface ApiErrorBody {
 }
 
 export type SnackCategory = 'SWEET' | 'SAVOURY' | 'DRINK' | 'HEALTHY_ISH';
-export type SnackStatus = 'stocked' | 'running_low' | 'gone';
+export type SnackStatus = 'stocked' | 'running_low' | 'gone' | 'archived';
 
 export interface Snack {
   id: string;
@@ -28,6 +28,7 @@ export interface Snack {
   voteCount: number;
   hasVoted: boolean;
   isFavorite?: boolean;
+  archivedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

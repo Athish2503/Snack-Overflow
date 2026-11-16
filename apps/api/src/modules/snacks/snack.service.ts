@@ -18,6 +18,7 @@ export interface FormattedSnack {
   voteCount: number;
   hasVoted: boolean;
   isFavorite: boolean;
+  archivedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,7 +28,13 @@ export class SnackService {
     const { page, limit, search, category, status, favoritesOnly, votedOnly, sortBy, sortOrder } = query;
     const offset = (page - 1) * limit;
 
-    const whereConditions: Prisma.Sql[] = [Prisma.sql`s."archivedAt" IS NULL`];
+    const whereConditions: Prisma.Sql[] = [];
+
+    if (status === 'archived') {
+      whereConditions.push(Prisma.sql`s."archivedAt" IS NOT NULL`);
+    } else {
+      whereConditions.push(Prisma.sql`s."archivedAt" IS NULL`);
+    }
 
     if (category) {
       whereConditions.push(Prisma.sql`s."category"::text = ${category}`);
@@ -38,7 +45,7 @@ export class SnackService {
       whereConditions.push(Prisma.sql`s."name" ILIKE ${searchPattern}`);
     }
 
-    if (status) {
+    if (status && status !== 'archived') {
       if (status === 'gone') {
         whereConditions.push(Prisma.sql`s."quantity" = 0`);
       } else if (status === 'running_low') {
@@ -88,6 +95,7 @@ export class SnackService {
         calories: number | null;
         imageUrl: string | null;
         images: string[];
+        archivedAt: Date | null;
         createdAt: Date;
         updatedAt: Date;
         voteCount: bigint;
@@ -104,6 +112,7 @@ export class SnackService {
         s."calories",
         s."imageUrl",
         s."images",
+        s."archivedAt",
         s."createdAt",
         s."updatedAt",
         COALESCE(v.vote_count, 0) as "voteCount",
@@ -136,7 +145,8 @@ export class SnackService {
         calories: r.calories,
         imageUrl,
         images,
-        status: getSnackStatus(r.quantity, r.lowStockThreshold),
+        status: r.archivedAt ? 'archived' : getSnackStatus(r.quantity, r.lowStockThreshold),
+        archivedAt: r.archivedAt,
         voteCount: Number(r.voteCount),
         hasVoted: Boolean(r.hasVoted),
         isFavorite: Boolean(r.isFavorite),
@@ -156,9 +166,10 @@ export class SnackService {
     };
   }
 
-  static async getSnackById(id: string, currentUserId?: string): Promise<FormattedSnack> {
+  static async getSnackById(id: string, currentUserId?: string, userRole?: string): Promise<FormattedSnack> {
+    const whereCondition = userRole === 'ADMIN' ? { id } : { id, archivedAt: null };
     const snack = await prisma.snack.findFirst({
-      where: { id, archivedAt: null },
+      where: whereCondition,
       include: {
         votes: currentUserId
           ? {
@@ -195,7 +206,8 @@ export class SnackService {
       calories: snack.calories,
       imageUrl,
       images,
-      status: getSnackStatus(snack.quantity, snack.lowStockThreshold),
+      status: snack.archivedAt ? 'archived' : getSnackStatus(snack.quantity, snack.lowStockThreshold),
+      archivedAt: snack.archivedAt,
       voteCount: snack._count.votes,
       hasVoted: Boolean(snack.votes && snack.votes.length > 0),
       isFavorite: Boolean(snack.favorites && snack.favorites.length > 0),
@@ -850,6 +862,71 @@ export class SnackService {
     });
 
     return { success: true };
+  }
+
+  /**
+   * Admin: Restore soft-archived snack back to the active pantry.
+   */
+  static async restoreSnack(id: string) {
+    const existing = await prisma.snack.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new ApiError(404, 'NOT_FOUND', 'Snack not found');
+    }
+
+    if (!existing.archivedAt) {
+      throw new ApiError(400, 'BAD_REQUEST', 'Snack is not archived');
+    }
+
+    const restored = await prisma.snack.update({
+      where: { id },
+      data: { archivedAt: null },
+    });
+
+    const rawImages = Array.isArray(restored.images) ? restored.images : [];
+    const images = rawImages.length > 0 ? rawImages : (restored.imageUrl ? [restored.imageUrl] : []);
+    const imageUrl = restored.imageUrl || (images.length > 0 ? images[0] : null);
+
+    const result: FormattedSnack = {
+      id: restored.id,
+      name: restored.name,
+      category: restored.category,
+      quantity: restored.quantity,
+      lowStockThreshold: restored.lowStockThreshold,
+      calories: restored.calories,
+      imageUrl,
+      images,
+      status: getSnackStatus(restored.quantity, restored.lowStockThreshold),
+      archivedAt: null,
+      voteCount: 0,
+      hasVoted: false,
+      isFavorite: false,
+      createdAt: restored.createdAt,
+      updatedAt: restored.updatedAt,
+    };
+
+    EventsService.broadcastSnackMutated({
+      action: 'CREATED',
+      snack: {
+        id: restored.id,
+        name: restored.name,
+        category: restored.category,
+        quantity: restored.quantity,
+        lowStockThreshold: restored.lowStockThreshold,
+      },
+    });
+
+    EventsService.broadcastStockUpdated({
+      snackId: restored.id,
+      snackName: restored.name,
+      quantity: restored.quantity,
+      lowStockThreshold: restored.lowStockThreshold,
+      status: result.status,
+    });
+
+    return result;
   }
 
   /**

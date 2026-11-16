@@ -295,6 +295,32 @@ describe('Voting & Admin Snack Management (Phase 5)', () => {
         .get(`/api/snacks/${snack.id}`)
         .set('Cookie', memberCookie);
       expect(getRes.status).toBe(404);
+
+      // Snack appears when querying status=archived
+      const archivedList = await request(app)
+        .get('/api/snacks?status=archived')
+        .set('Cookie', adminCookie);
+      expect(archivedList.status).toBe(200);
+      const foundArchived = archivedList.body.data.find((s: { id: string }) => s.id === snack.id);
+      expect(foundArchived).toBeDefined();
+      expect(foundArchived.status).toBe('archived');
+
+      // Member cannot restore
+      const memberRestore = await request(app)
+        .post(`/api/snacks/${snack.id}/restore`)
+        .set('Cookie', memberCookie);
+      expect(memberRestore.status).toBe(403);
+
+      // Admin restores snack
+      const adminRestore = await request(app)
+        .post(`/api/snacks/${snack.id}/restore`)
+        .set('Cookie', adminCookie);
+      expect(adminRestore.status).toBe(200);
+      expect(adminRestore.body.data.status).toBe('stocked');
+
+      // Verify unarchived in DB
+      const restoredInDb = await prisma.snack.findUnique({ where: { id: snack.id } });
+      expect(restoredInDb?.archivedAt).toBeNull();
     });
   });
 });

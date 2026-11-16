@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { clsx } from 'clsx';
-import { Check, AlertTriangle, X } from 'lucide-react';
+import { Check, AlertTriangle, X, Archive } from 'lucide-react';
 
-export type StockStatus = 'stocked' | 'running_low' | 'running-low' | 'gone' | 'low';
-type BadgeVariant = 'stocked' | 'running_low' | 'running-low' | 'gone' | 'low' | 'admin' | 'member' | 'custom';
+export type StockStatus = 'stocked' | 'running_low' | 'running-low' | 'gone' | 'low' | 'archived';
+type BadgeVariant = 'stocked' | 'running_low' | 'running-low' | 'gone' | 'low' | 'admin' | 'member' | 'archived' | 'custom';
 
 interface BadgeProps {
   variant?: BadgeVariant;
@@ -50,6 +50,12 @@ const statusConfig: Record<
     icon: <X size={11} strokeWidth={3} />,
     label: 'Gone',
   },
+  archived: {
+    bg: 'var(--surface-2)',
+    color: 'var(--ink-muted)',
+    icon: <Archive size={11} strokeWidth={2.8} />,
+    label: 'Archived',
+  },
 };
 
 const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
@@ -64,6 +70,7 @@ const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
     color: 'var(--running-low-ink)',
   },
   gone: { background: 'var(--gone-soft)', color: 'var(--gone-ink)' },
+  archived: { background: 'var(--surface-2)', color: 'var(--ink-muted)' },
   admin: { background: 'var(--accent-soft)', color: 'var(--accent)' },
   member: { background: 'var(--surface-2)', color: 'var(--ink-muted)' },
   custom: {},

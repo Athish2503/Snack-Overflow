@@ -78,7 +78,7 @@ export function AdminControlHeader({
               fontFamily: 'var(--font-jetbrains-mono), monospace',
             }}
           >
-            Pantry Control Room • Live Overview
+            Pantry Control Room • 
           </p>
         </div>
 

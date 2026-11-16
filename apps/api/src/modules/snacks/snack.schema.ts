@@ -19,7 +19,7 @@ export const snackQuerySchema = z.object({
   search: z.string().optional(),
   category: z.nativeEnum(SnackCategory).optional(),
   status: z
-    .enum(['stocked', 'running_low', 'gone', 'low'])
+    .enum(['stocked', 'running_low', 'gone', 'low', 'archived'])
     .optional()
     .transform((val) => (val === 'low' ? 'running_low' : val)),
   favoritesOnly: z

@@ -1,4 +1,4 @@
-export type SnackStatus = 'stocked' | 'running_low' | 'gone';
+export type SnackStatus = 'stocked' | 'running_low' | 'gone' | 'archived';
 
 export function getSnackStatus(quantity: number, lowStockThreshold: number): SnackStatus {
   if (quantity === 0) {

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useTransition } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Search, PackageOpen } from 'lucide-react';
+import { Plus, Search, PackageOpen, Archive } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
 import { SnackListResponse, SnackCategory, SnackStatus, Snack } from '@/lib/types';
@@ -170,33 +170,108 @@ export default function SnacksPage() {
           </p>
         </div>
 
-        {/* Admin "+ Add snack" Button */}
-        {user?.role === 'ADMIN' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* Admin "View Archived" / "View Active" Toggle */}
+          {user?.role === 'ADMIN' && (
+            <button
+              type="button"
+              onClick={() => handleStatusChange(status === 'archived' ? undefined : 'archived')}
+              className="sticker focus-ring"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '12px 18px',
+                borderRadius: 'var(--radius-sm)',
+                background: status === 'archived' ? 'var(--ink)' : 'var(--surface-2)',
+                color: status === 'archived' ? 'var(--surface)' : 'var(--ink)',
+                border: '2px solid var(--ink)',
+                boxShadow: 'var(--shadow)',
+                fontSize: 14,
+                fontWeight: 800,
+                cursor: 'pointer',
+              }}
+            >
+              <Archive size={16} />
+              {status === 'archived' ? 'View Active Snacks' : 'Archived Snacks'}
+            </button>
+          )}
+
+          {/* Admin "+ Add snack" Button */}
+          {user?.role === 'ADMIN' && (
+            <button
+              type="button"
+              onClick={() => setIsAddOpen(true)}
+              className="sticker focus-ring"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '12px 22px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'var(--primary)',
+                color: 'var(--ink)',
+                border: '2px solid var(--ink)',
+                boxShadow: 'var(--shadow)',
+                fontSize: 15,
+                fontWeight: 800,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-bricolage), sans-serif',
+              }}
+            >
+              <Plus size={18} />
+               Add snack
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Archived Notice Banner ── */}
+      {status === 'archived' && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'var(--surface-2)',
+            border: '2px solid var(--ink)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '14px 18px',
+            boxShadow: 'var(--shadow)',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 22 }}>📦</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--ink)' }}>
+                Showing Archived Snacks ({pagination?.totalItems ?? 0})
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--ink-muted)' }}>
+                These snacks are soft-archived. Their activity and voting histories are preserved, and admins can restore them at any time.
+              </div>
+            </div>
+          </div>
           <button
             type="button"
-            onClick={() => setIsAddOpen(true)}
+            onClick={() => handleStatusChange(undefined)}
             className="sticker focus-ring"
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '12px 22px',
+              padding: '8px 16px',
               borderRadius: 'var(--radius-sm)',
-              background: 'var(--primary)',
-              color: 'var(--ink)',
+              background: 'var(--surface)',
               border: '2px solid var(--ink)',
-              boxShadow: 'var(--shadow)',
-              fontSize: 15,
+              fontSize: 13,
               fontWeight: 800,
               cursor: 'pointer',
-              fontFamily: 'var(--font-bricolage), sans-serif',
+              color: 'var(--ink)',
             }}
           >
-            <Plus size={18} />
-             Add snack
+            ← Back to Active Pantry
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Filter Bar ── */}
       <FilterBar

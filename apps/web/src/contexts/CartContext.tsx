@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Snack, CartItem, SnackCategory } from '../lib/types';
+import { useAuth } from './AuthContext';
 
 export interface FlyingItem {
   id: string;
@@ -35,37 +36,74 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const CART_STORAGE_KEY = 'snackoverflow_cart_v1';
+function getCartStorageKey(userId?: string | null): string {
+  return userId ? `snackoverflow_cart_${userId}` : 'snackoverflow_cart_guest';
+}
+
+function loadUserCart(userId?: string | null): CartItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const key = getCartStorageKey(userId);
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+  return [];
+}
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+
   const [cart, setCart] = useState<CartItem[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const stored = localStorage.getItem(CART_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch {
-      // Ignore localStorage errors
-    }
-    return [];
+    return loadUserCart(userId);
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([]);
   const [isBouncing, setIsBouncing] = useState(false);
   const cartTargetRef = useRef<HTMLElement | null>(null);
 
-  // Save cart to localStorage on change
+  // Track which user's cart is currently in state
+  const lastLoadedUserIdRef = useRef<string | null>(userId);
+
+  // Clean up any legacy shared cart key
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('snackoverflow_cart_v1');
+      } catch {
+        // Ignore localStorage errors
+      }
+    }
+  }, []);
+
+  // Sync cart whenever the logged-in user changes (or upon initial session restore)
+  useEffect(() => {
+    if (lastLoadedUserIdRef.current !== userId) {
+      setCart(loadUserCart(userId));
+      lastLoadedUserIdRef.current = userId;
+    }
+  }, [userId]);
+
+  // Save cart to user-scoped localStorage key
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    // Guard: do not save the old user's cart to the new user's storage key before loading
+    if (lastLoadedUserIdRef.current !== userId) return;
+
     try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+      const key = getCartStorageKey(userId);
+      localStorage.setItem(key, JSON.stringify(cart));
     } catch {
       // Ignore localStorage errors
     }
-  }, [cart]);
+  }, [cart, userId]);
 
   const registerCartTarget = useCallback((element: HTMLElement | null) => {
     cartTargetRef.current = element;

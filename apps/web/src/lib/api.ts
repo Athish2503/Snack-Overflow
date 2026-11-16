@@ -59,7 +59,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     );
   }
 
-  return res.json() as Promise<T>;
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return {} as T;
+  }
+
+  const text = await res.text();
+  return (text ? JSON.parse(text) : {}) as T;
 }
 
 export const api = {

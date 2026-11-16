@@ -36,6 +36,7 @@ export function FilterBar({
     stocked: 'Stocked',
     running_low: 'Running low',
     gone: 'Gone',
+    archived: 'Archived',
   };
 
   return (
@@ -166,6 +167,7 @@ export function FilterBar({
               <option value="stocked">Stocked</option>
               <option value="running_low">Running low</option>
               <option value="gone">Gone</option>
+              <option value="archived">Archived</option>
             </select>
             <ChevronDown
               size={16}
@@ -502,6 +504,7 @@ export function FilterBar({
                 <option value="stocked">Stocked</option>
                 <option value="running_low">Running low</option>
                 <option value="gone">Gone</option>
+                <option value="archived">Archived</option>
               </select>
             </div>
 
